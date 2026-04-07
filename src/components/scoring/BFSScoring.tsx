@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
-import { getParticipantSessions, getPillarScores } from '@/lib/storage';
+import { getPillarScores, getAllPillarScoresForParticipant } from '@/lib/storage';
 import { AgeBand, DemandProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,40 +15,59 @@ const AGE_BANDS: AgeBand[] = ['18-24', '25-29', '30-34', '35-44', '45-54'];
 const DEMAND_PROFILES: DemandProfile[] = ['HIGH', 'MODERATE', 'LOWER'];
 
 export default function BFSScoring() {
-  const { participant } = useSession();
+  const { participant, currentSessionNumber } = useSession();
   const [screen, setScreen] = useState<Screen>('input');
+  const [selectedSession, setSelectedSession] = useState(String(currentSessionNumber));
 
   const hasDemographics = !!participant?.demographics;
   const autoAge = participant?.demographics?.age_band || '';
   const autoProfile = participant?.demographics?.demand_profile || '';
 
-  // Auto-load pillar scores from completed tests
-  const pillarScores = participant ? getPillarScores(participant.participant_id) : null;
+  // Get all sessions' scores for history
+  const allSessionScores = useMemo(() => {
+    if (!participant) return [];
+    return getAllPillarScoresForParticipant(participant.participant_id);
+  }, [participant]);
+
+  const sessionNum = parseInt(selectedSession) || currentSessionNumber;
+  const pillarScores = participant ? getPillarScores(participant.participant_id, sessionNum) : null;
   const hasAutoScores = !!(pillarScores?.recall_raw != null || pillarScores?.lockin_raw != null || pillarScores?.sharpness_raw != null);
 
-  // Input state — pre-fill from demographics and test results
+  // Build session options
+  const sessionOptions = useMemo(() => {
+    const sessions: number[] = [];
+    const maxSess = Math.max(currentSessionNumber, ...allSessionScores.map(s => s.session_number));
+    for (let i = 1; i <= maxSess; i++) sessions.push(i);
+    return sessions;
+  }, [currentSessionNumber, allSessionScores]);
+
+  // Input state
   const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
   const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
   const [recallRaw, setRecallRaw] = useState(pillarScores?.recall_raw != null ? String(pillarScores.recall_raw) : '');
   const [lockinRaw, setLockinRaw] = useState(pillarScores?.lockin_raw != null ? String(pillarScores.lockin_raw) : '');
   const [sharpnessRaw, setSharpnessRaw] = useState(pillarScores?.sharpness_raw != null ? String(pillarScores.sharpness_raw) : '');
-
-  // Secondary scores (for facilitator display)
   const [fluencyScore, setFluencyScore] = useState(pillarScores?.recall_fluency != null ? String(pillarScores.recall_fluency) : '');
 
-  // Result
-  const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
+  // When session selection changes, update scores
+  const handleSessionChange = (val: string) => {
+    setSelectedSession(val);
+    const num = parseInt(val);
+    const scores = participant ? getPillarScores(participant.participant_id, num) : null;
+    setRecallRaw(scores?.recall_raw != null ? String(scores.recall_raw) : '');
+    setLockinRaw(scores?.lockin_raw != null ? String(scores.lockin_raw) : '');
+    setSharpnessRaw(scores?.sharpness_raw != null ? String(scores.sharpness_raw) : '');
+    setFluencyScore(scores?.recall_fluency != null ? String(scores.recall_fluency) : '');
+    setScreen('input');
+  };
 
-  // Previous BFS for movement
-  const previousSessions = participant ? getParticipantSessions(participant.participant_id) : [];
-  const lastBFS = previousSessions.length > 0 ? (previousSessions[previousSessions.length - 1] as any)?.bfs_composite : null;
+  const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
 
   const handleCalculate = () => {
     if (!ageBand || !demandProfile) return;
     const rr = parseFloat(recallRaw) || 0;
     const lr = parseFloat(lockinRaw) || 0;
     const sr = parseFloat(sharpnessRaw) || 0;
-
     const result = computeBFS(rr, lr, sr, demandProfile, ageBand);
     if (result) {
       setBfsResult(result);
@@ -58,6 +77,15 @@ export default function BFSScoring() {
 
   const canCalculate = ageBand && demandProfile && recallRaw && lockinRaw && sharpnessRaw;
 
+  // Find previous session's BFS for movement comparison
+  const getPreviousSessionBFS = (): number | null => {
+    if (sessionNum <= 1) return null;
+    const prevScores = participant ? getPillarScores(participant.participant_id, sessionNum - 1) : null;
+    if (!prevScores || prevScores.recall_raw == null || prevScores.lockin_raw == null || prevScores.sharpness_raw == null) return null;
+    const prevResult = computeBFS(prevScores.recall_raw, prevScores.lockin_raw, prevScores.sharpness_raw, demandProfile as DemandProfile, ageBand as AgeBand);
+    return prevResult?.bfsComposite || null;
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <AnimatePresence mode="wait">
@@ -66,9 +94,33 @@ export default function BFSScoring() {
             <div className="text-center space-y-2">
               <h2 className="text-display text-2xl text-foreground">BFS Scoring</h2>
               <p className="text-sm text-muted-foreground">
-                Enter participant biodata and raw pillar scores to compute the Brain Fitness Score.
+                Session {sessionNum} scores for {participant?.participant_id || 'participant'}
               </p>
             </div>
+
+            {/* Session Selector */}
+            {sessionOptions.length > 1 && (
+              <div className="card-elevated p-4">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-foreground whitespace-nowrap">View Session:</label>
+                  <Select value={selectedSession} onValueChange={handleSessionChange}>
+                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {sessionOptions.map(s => {
+                        const sc = getPillarScores(participant?.participant_id || '', s);
+                        const complete = sc?.recall_raw != null && sc?.lockin_raw != null && sc?.sharpness_raw != null;
+                        const partial = sc?.recall_raw != null || sc?.lockin_raw != null || sc?.sharpness_raw != null;
+                        return (
+                          <SelectItem key={s} value={String(s)}>
+                            Session {s} {complete ? '✓' : partial ? '(partial)' : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* Biodata */}
             <div className="card-elevated p-6 space-y-4">
@@ -92,9 +144,7 @@ export default function BFSScoring() {
                   <Select value={ageBand} onValueChange={(v) => setAgeBand(v as AgeBand)} disabled={hasDemographics}>
                     <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
-                      {AGE_BANDS.map(ab => (
-                        <SelectItem key={ab} value={ab}>{ab}</SelectItem>
-                      ))}
+                      {AGE_BANDS.map(ab => <SelectItem key={ab} value={ab}>{ab}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -103,9 +153,7 @@ export default function BFSScoring() {
                   <Select value={demandProfile} onValueChange={(v) => setDemandProfile(v as DemandProfile)} disabled={hasDemographics}>
                     <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
-                      {DEMAND_PROFILES.map(dp => (
-                        <SelectItem key={dp} value={dp}>{dp}</SelectItem>
-                      ))}
+                      {DEMAND_PROFILES.map(dp => <SelectItem key={dp} value={dp}>{dp}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -121,7 +169,7 @@ export default function BFSScoring() {
 
             {/* Raw Pillar Scores */}
             <div className="card-elevated p-6 space-y-4">
-              <p className="text-display text-sm text-primary">RAW PILLAR SCORES</p>
+              <p className="text-display text-sm text-primary">RAW PILLAR SCORES — SESSION {sessionNum}</p>
               {hasAutoScores && (
                 <div className="bg-success/10 border border-success/20 rounded-lg px-4 py-2 text-xs text-success font-medium">
                   ✓ Scores auto-populated from completed tests
@@ -133,33 +181,15 @@ export default function BFSScoring() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Recall</label>
-                  <Input
-                    type="number" min="0" max="100"
-                    value={recallRaw}
-                    onChange={e => setRecallRaw(e.target.value)}
-                    placeholder="0-100"
-                    className="text-center text-lg h-12"
-                  />
+                  <Input type="number" min="0" max="100" value={recallRaw} onChange={e => setRecallRaw(e.target.value)} placeholder="0-100" className="text-center text-lg h-12" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Lock-In</label>
-                  <Input
-                    type="number" min="0" max="100"
-                    value={lockinRaw}
-                    onChange={e => setLockinRaw(e.target.value)}
-                    placeholder="0-100"
-                    className="text-center text-lg h-12"
-                  />
+                  <Input type="number" min="0" max="100" value={lockinRaw} onChange={e => setLockinRaw(e.target.value)} placeholder="0-100" className="text-center text-lg h-12" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Sharpness</label>
-                  <Input
-                    type="number" min="0" max="100"
-                    value={sharpnessRaw}
-                    onChange={e => setSharpnessRaw(e.target.value)}
-                    placeholder="0-100"
-                    className="text-center text-lg h-12"
-                  />
+                  <Input type="number" min="0" max="100" value={sharpnessRaw} onChange={e => setSharpnessRaw(e.target.value)} placeholder="0-100" className="text-center text-lg h-12" />
                 </div>
               </div>
             </div>
@@ -170,13 +200,7 @@ export default function BFSScoring() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs text-muted-foreground">Fluency Score</label>
-                  <Input
-                    type="number"
-                    value={fluencyScore}
-                    onChange={e => setFluencyScore(e.target.value)}
-                    placeholder="—"
-                    className="text-center h-10"
-                  />
+                  <Input type="number" value={fluencyScore} onChange={e => setFluencyScore(e.target.value)} placeholder="—" className="text-center h-10" />
                 </div>
               </div>
             </div>
@@ -184,13 +208,52 @@ export default function BFSScoring() {
             <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>
               Calculate BFS
             </Button>
+
+            {/* Session History Table */}
+            {allSessionScores.length > 0 && (
+              <div className="card-elevated p-6 space-y-4">
+                <p className="text-display text-sm text-primary">SESSION HISTORY</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 text-muted-foreground font-medium">Session</th>
+                        <th className="text-center py-2 text-muted-foreground font-medium">Recall</th>
+                        <th className="text-center py-2 text-muted-foreground font-medium">Lock-In</th>
+                        <th className="text-center py-2 text-muted-foreground font-medium">Sharpness</th>
+                        <th className="text-center py-2 text-muted-foreground font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allSessionScores.map(s => {
+                        const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+                        return (
+                          <tr key={s.session_number} className={`border-b last:border-0 ${s.session_number === sessionNum ? 'bg-primary/5' : ''}`}>
+                            <td className="py-2 text-foreground font-medium">Session {s.session_number}</td>
+                            <td className="py-2 text-center">{s.recall_raw != null ? s.recall_raw : '—'}</td>
+                            <td className="py-2 text-center">{s.lockin_raw != null ? s.lockin_raw : '—'}</td>
+                            <td className="py-2 text-center">{s.sharpness_raw != null ? s.sharpness_raw : '—'}</td>
+                            <td className="py-2 text-center">
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${complete ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                                {complete ? 'Complete' : 'Partial'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
         {screen === 'participant_result' && bfsResult && (
           <ParticipantDisplay
             result={bfsResult}
-            lastBFS={lastBFS}
+            lastBFS={getPreviousSessionBFS()}
+            sessionNumber={sessionNum}
             onContinue={() => setScreen('facilitator_output')}
           />
         )}
@@ -203,6 +266,7 @@ export default function BFSScoring() {
             sharpnessRaw={parseFloat(sharpnessRaw)}
             fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined}
             participantId={participant?.participant_id || 'Unknown'}
+            sessionNumber={sessionNum}
             onSave={() => setScreen('saved')}
           />
         )}
@@ -211,6 +275,7 @@ export default function BFSScoring() {
           <SavedScreen
             result={bfsResult}
             participantId={participant?.participant_id || 'Unknown'}
+            sessionNumber={sessionNum}
             onNewSession={() => setScreen('input')}
           />
         )}
@@ -220,16 +285,20 @@ export default function BFSScoring() {
 }
 
 // === Participant BFS Display ===
-function ParticipantDisplay({ result, lastBFS, onContinue }: {
+function ParticipantDisplay({ result, lastBFS, sessionNumber, onContinue }: {
   result: BFSResult;
   lastBFS: number | null;
+  sessionNumber: number;
   onContinue: () => void;
 }) {
   const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-      <h2 className="text-display text-2xl text-foreground text-center">YOUR BRAIN FITNESS SCORE</h2>
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-1">Session {sessionNumber}</p>
+        <h2 className="text-display text-2xl text-foreground">YOUR BRAIN FITNESS SCORE</h2>
+      </div>
 
       <div className="space-y-5">
         <PillarBar label="RECALL" score={result.recallBFS} target={75} />
@@ -294,18 +363,15 @@ function PillarBar({ label, score, target }: { label: string; score: number; tar
     <div className="space-y-1">
       <p className="text-display text-sm text-foreground">{label}</p>
       <div className="relative h-8 bg-muted rounded-full overflow-hidden">
-        {/* Score fill */}
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${scorePos}%` }}
           transition={{ duration: 1, ease: 'easeOut' }}
           className={`absolute inset-y-0 left-0 rounded-full ${scorePos < targetPos ? 'bg-warning' : 'bg-success'}`}
         />
-        {/* Target marker */}
         <div className="absolute inset-y-0 flex items-center" style={{ left: `${targetPos}%` }}>
           <div className="w-0.5 h-full bg-foreground/40" />
         </div>
-        {/* Score label */}
         <div className="absolute inset-y-0 flex items-center px-3" style={{ left: `${Math.max(0, scorePos - 8)}%` }}>
           <span className="text-xs font-bold text-foreground">{score}</span>
         </div>
@@ -320,19 +386,20 @@ function PillarBar({ label, score, target }: { label: string; score: number; tar
 }
 
 // === Facilitator Full Output ===
-function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, onSave }: {
+function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, onSave }: {
   result: BFSResult;
   recallRaw: number;
   lockinRaw: number;
   sharpnessRaw: number;
   fluencyScore?: number;
   participantId: string;
+  sessionNumber: number;
   onSave: () => void;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-display text-xl text-foreground">BFS FULL OUTPUT — FACILITATOR VIEW</h2>
+        <h2 className="text-display text-xl text-foreground">BFS FULL OUTPUT — SESSION {sessionNumber}</h2>
       </div>
 
       <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-2 text-xs text-primary font-medium">
@@ -341,11 +408,11 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
 
       <div className="card-elevated p-4 space-y-2 text-sm">
         <Row label="Participant ID" value={participantId} />
+        <Row label="Session" value={String(sessionNumber)} />
         <Row label="Profile" value={result.profileCell.replace('_', ' / ')} />
         <Row label="Norm version" value="1.0 (ASSUMED)" />
       </div>
 
-      {/* Recall section */}
       <div className="card-elevated p-4 space-y-2 text-sm">
         <p className="text-display text-xs text-primary">RECALL</p>
         <Row label="Raw score" value={`${recallRaw} / 100`} />
@@ -360,7 +427,6 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         )}
       </div>
 
-      {/* Lock-In section */}
       <div className="card-elevated p-4 space-y-2 text-sm">
         <p className="text-display text-xs text-primary">LOCK-IN</p>
         <Row label="Raw score" value={`${lockinRaw} / 100`} />
@@ -369,7 +435,6 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         <Row label="BFS component" value={String(result.lockinBFS)} />
       </div>
 
-      {/* Sharpness section */}
       <div className="card-elevated p-4 space-y-2 text-sm">
         <p className="text-display text-xs text-primary">SHARPNESS</p>
         <Row label="Raw score" value={`${sharpnessRaw} / 100`} />
@@ -378,7 +443,6 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         <Row label="BFS component" value={String(result.sharpnessBFS)} />
       </div>
 
-      {/* Composite */}
       <div className="card-elevated p-5 text-center space-y-2 border-2 border-primary/20">
         <p className="text-display text-xs text-muted-foreground">COMPOSITE BFS</p>
         <p className="text-display text-4xl text-foreground">{result.bfsComposite}<span className="text-xl text-muted-foreground"> / 100</span></p>
@@ -388,7 +452,6 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         </div>
       </div>
 
-      {/* Facilitator script */}
       <div className="card-sunken p-4 space-y-2">
         <p className="text-xs text-muted-foreground">SAY TO PARTICIPANT:</p>
         <p className="text-base font-medium text-foreground italic">
@@ -409,40 +472,26 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
 }
 
 // === Saved screen ===
-function SavedScreen({ result, participantId, onNewSession }: {
+function SavedScreen({ result, participantId, sessionNumber, onNewSession }: {
   result: BFSResult;
   participantId: string;
+  sessionNumber: number;
   onNewSession: () => void;
 }) {
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + 14);
-  const nextDateStr = nextDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
       <div className="text-center space-y-3">
         <CheckCircle2 className="w-16 h-16 text-success mx-auto" />
-        <h2 className="text-display text-2xl text-foreground">SESSION SAVED</h2>
+        <h2 className="text-display text-2xl text-foreground">SESSION {sessionNumber} SAVED</h2>
       </div>
 
       <div className="card-elevated p-6 space-y-3 text-sm">
         <Row label="Participant ID" value={participantId} />
+        <Row label="Session" value={String(sessionNumber)} />
         <Row label="BFS" value={`${result.bfsComposite} / 100`} />
         <Row label="Saved" value={todayStr} />
-      </div>
-
-      <div className="card-elevated p-6 space-y-3">
-        <p className="text-display text-sm text-primary">NEXT BFS TEST AVAILABLE</p>
-        <p className="text-lg font-medium text-foreground">From: {nextDateStr}</p>
-        <p className="text-xs text-muted-foreground">(14-day minimum between tests)</p>
-      </div>
-
-      <div className="card-sunken p-4 space-y-2">
-        <p className="text-xs text-muted-foreground">SAY TO PARTICIPANT:</p>
-        <p className="text-sm font-medium text-foreground italic">
-          "Your next test is available from {nextDateStr}. Between now and then, your exercise sessions will start building your score. We'll track your progress every time you come in."
-        </p>
       </div>
 
       <div className="flex gap-3">
@@ -450,7 +499,7 @@ function SavedScreen({ result, participantId, onNewSession }: {
           <Download className="w-5 h-5 mr-2" /> Export Scorecard PDF
         </Button>
         <Button variant="hero" size="xl" className="flex-1" onClick={onNewSession}>
-          Start New Session
+          Back to Scoring
         </Button>
       </div>
     </motion.div>
