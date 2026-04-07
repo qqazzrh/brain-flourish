@@ -18,9 +18,13 @@ export default function BFSScoring() {
   const { participant } = useSession();
   const [screen, setScreen] = useState<Screen>('input');
 
-  // Input state
-  const [ageBand, setAgeBand] = useState<AgeBand | ''>('');
-  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>('');
+  const hasDemographics = !!participant?.demographics;
+  const autoAge = participant?.demographics?.age_band || '';
+  const autoProfile = participant?.demographics?.demand_profile || '';
+
+  // Input state — pre-fill from demographics
+  const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
+  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
   const [recallRaw, setRecallRaw] = useState('');
   const [lockinRaw, setLockinRaw] = useState('');
   const [sharpnessRaw, setSharpnessRaw] = useState('');
