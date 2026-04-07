@@ -2,6 +2,8 @@ export type FormId = 'A' | 'B' | 'C' | 'D';
 export type UnitCategory = 'WHO' | 'WHAT' | 'WHERE' | 'WHEN' | 'SPECIFIC';
 export type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict';
 export type ParticipantType = 'new' | 'returning';
+export type AgeBand = '18-24' | '25-29' | '30-34' | '35-44' | '45-54';
+export type DemandProfile = 'HIGH' | 'MODERATE' | 'LOWER';
 
 export interface ScoreableUnit {
   unit_id: number;
