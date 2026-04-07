@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLockIn } from '@/contexts/LockInContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeLockInScore, computeSegments } from '@/lib/stimulus-engine';
+import { savePillarScore } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight, Flag } from 'lucide-react';
@@ -44,6 +45,13 @@ export default function LockInScoreOutput() {
       response_log: state.responseLog,
     });
     localStorage.setItem('bfs_lockin_sessions', JSON.stringify(existing));
+    // Save pillar score for BFS scoring
+    if (participant) {
+      savePillarScore(participant.participant_id, {
+        lockin_raw: scores.pillarScore,
+        lockin_degradation_index: degradationIndex,
+      });
+    }
     setSaved(true);
   };
 

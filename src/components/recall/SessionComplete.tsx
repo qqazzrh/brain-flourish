@@ -4,7 +4,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { PASSAGE_FORMS, FORM_DOMAINS, DISTRACTION_TASKS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
-import { saveSession, generateSessionId, saveParticipant } from '@/lib/storage';
+import { saveSession, generateSessionId, saveParticipant, savePillarScore } from '@/lib/storage';
 import { motion } from 'framer-motion';
 import { Check, X, Edit3, Save, FileDown, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -79,6 +79,11 @@ export default function SessionComplete() {
       },
     };
     saveSession(session);
+    // Save pillar score for BFS scoring
+    savePillarScore(participant.participant_id, {
+      recall_raw: pillarScore,
+      recall_fluency: state.distractionValidCount,
+    });
     const updatedP = { ...participant };
     updatedP.session_count += 1;
     updatedP.last_session_date = now.split('T')[0];
