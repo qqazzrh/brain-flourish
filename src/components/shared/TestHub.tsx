@@ -139,7 +139,7 @@ export default function TestHub() {
                           <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
                             mod.done 
                               ? 'bg-success/10 text-success' 
-                              : 'bg-primary/10 text-primary'
+                              : 'bg-warning/15 text-warning'
                           }`}>
                             {mod.done ? 'Done' : 'Ready'}
                           </span>

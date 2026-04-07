@@ -91,7 +91,7 @@ export default function DistractionTimer() {
       <div className="px-6 py-4 border-b flex items-center justify-between">
         <div>
           <p className="text-display text-lg text-foreground">DISTRACTION TASK RUNNING</p>
-          <p className="text-muted-foreground">{optionSet.category} beginning with {optionSet.letter}</p>
+          <p className="text-muted-foreground">{optionSet.category}</p>
         </div>
         <div className={`text-display text-4xl tabular-nums ${timerColor} transition-colors`}>
           {mins}:{String(secs).padStart(2, '0')}

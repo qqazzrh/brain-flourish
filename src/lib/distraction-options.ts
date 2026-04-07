@@ -1,71 +1,51 @@
 import { FormId } from './types';
 
-// Each form has a list of valid answers and decoy answers for the distraction task
-// The facilitator taps from this list. If they tap a repeat, it's marked invalid.
-
 export interface DistractionOptionSet {
   form_id: FormId;
   category: string;
-  letter: string;
+  instruction: string;
   validOptions: string[];
-  decoyOptions: string[];
 }
 
 export const DISTRACTION_OPTIONS: Record<FormId, DistractionOptionSet> = {
   A: {
     form_id: 'A',
-    category: 'Animals',
-    letter: 'S',
+    category: 'Pets',
+    instruction: 'For the next 90 seconds, I want you to name as many animals as you can that people commonly keep as pets. Speak out loud. Keep going until I tell you to stop. Start whenever you\'re ready.',
     validOptions: [
-      'Snake', 'Salmon', 'Seal', 'Shark', 'Sheep',
-      'Snail', 'Spider', 'Squid', 'Stork', 'Swan',
-      'Sparrow', 'Scorpion', 'Starfish', 'Sardine', 'Skunk',
-      'Squirrel', 'Sloth', 'Stingray',
-    ],
-    decoyOptions: [
-      'Cat', 'Dog', 'Bear', 'Tiger',
+      'Dog', 'Cat', 'Rabbit', 'Hamster', 'Goldfish',
+      'Parrot', 'Turtle', 'Guinea pig', 'Lizard', 'Snake',
+      'Budgie', 'Chinchilla', 'Ferret', 'Gerbil', 'Hermit crab',
     ],
   },
   B: {
     form_id: 'B',
-    category: 'Vegetables',
-    letter: 'B',
+    category: 'Planets (incl. dwarf planets)',
+    instruction: 'For the next 90 seconds, I want you to name as many planets in our solar system as you can — including dwarf planets. Speak out loud. Keep going until I tell you to stop. Start whenever you\'re ready.',
     validOptions: [
-      'Broccoli', 'Beetroot', 'Bean', 'Bok choy', 'Brussels sprout',
-      'Butternut', 'Bell pepper', 'Basil', 'Bamboo shoot', 'Black bean',
-      'Broad bean', 'Butter bean', 'Beet greens', 'Banana pepper', 'Batavia lettuce',
-      'Broccolini', 'Baby corn', 'Borage',
-    ],
-    decoyOptions: [
-      'Carrot', 'Potato', 'Tomato', 'Onion',
+      'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter',
+      'Saturn', 'Uranus', 'Neptune', 'Pluto', 'Eris',
+      'Makemake', 'Haumea', 'Ceres',
     ],
   },
   C: {
     form_id: 'C',
-    category: 'Countries',
-    letter: 'M',
+    category: 'Southeast Asian countries',
+    instruction: 'For the next 90 seconds, I want you to name as many countries in Southeast Asia as you can. Speak out loud. Keep going until I tell you to stop. Start whenever you\'re ready.',
     validOptions: [
-      'Mexico', 'Malaysia', 'Mongolia', 'Morocco', 'Mozambique',
-      'Myanmar', 'Mali', 'Malta', 'Mauritius', 'Moldova',
-      'Monaco', 'Montenegro', 'Madagascar', 'Malawi', 'Maldives',
-      'Mauritania', 'Macedonia', 'Marshall Islands',
-    ],
-    decoyOptions: [
-      'France', 'Japan', 'Brazil', 'India',
+      'Thailand', 'Vietnam', 'Indonesia', 'Philippines', 'Malaysia',
+      'Singapore', 'Myanmar', 'Cambodia', 'Laos', 'Brunei',
+      'Timor-Leste',
     ],
   },
   D: {
     form_id: 'D',
-    category: 'Occupations',
-    letter: 'T',
+    category: 'Ball sports',
+    instruction: 'For the next 90 seconds, I want you to name as many sports as you can that use a ball. Speak out loud. Keep going until I tell you to stop. Start whenever you\'re ready.',
     validOptions: [
-      'Teacher', 'Tailor', 'Technician', 'Therapist', 'Trainer',
-      'Translator', 'Treasurer', 'Taxi driver', 'Tiler', 'Turner',
-      'Tutor', 'Typist', 'Toxicologist', 'Travel agent', 'Truck driver',
-      'Telemarketer', 'Tester', 'Tree surgeon',
-    ],
-    decoyOptions: [
-      'Doctor', 'Engineer', 'Nurse', 'Lawyer',
+      'Football', 'Basketball', 'Tennis', 'Golf', 'Baseball',
+      'Volleyball', 'Rugby', 'Cricket', 'Hockey', 'Water polo',
+      'Bowling', 'Squash', 'Polo', 'Lacrosse', 'Handball',
     ],
   },
 };

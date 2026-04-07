@@ -27,17 +27,7 @@ export default function DistractionInstruction() {
 
         <div className="card-elevated p-8 space-y-4">
           <p className="text-2xl leading-relaxed text-foreground">
-            "Now — for the next 90 seconds, I want you to name as many{' '}
-            <span className="font-bold text-primary uppercase">{optionSet.category}</span>{' '}
-            as you can think of that begin with the letter{' '}
-            <span className="font-bold text-primary">{optionSet.letter}</span>.
-          </p>
-          <p className="text-2xl leading-relaxed text-foreground">
-            Speak out loud.<br />
-            Keep going until I tell you to stop.
-          </p>
-          <p className="text-2xl leading-relaxed text-foreground">
-            Start whenever you're ready."
+            "{optionSet.instruction}"
           </p>
         </div>
 
