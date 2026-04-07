@@ -29,11 +29,16 @@ export default function SharpnessOverview() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">Total time: about 4 minutes.</p>
+        <p className="text-center text-sm text-muted-foreground">Total time: about 4 minutes. Each part includes a short practice round.</p>
 
-        <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
-          Begin Part 1
-        </Button>
+        <div className="space-y-3">
+          <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
+            Begin with Practice
+          </Button>
+          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={() => goToScreen(2)}>
+            Skip All Practices — Start Real Tests
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
