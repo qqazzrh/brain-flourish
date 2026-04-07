@@ -118,7 +118,7 @@ export default function SharpnessScoreOutput() {
         <div className="card-sunken p-4 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
           <p className="text-lg text-foreground leading-relaxed">
-            "Your Sharpness score is {pillarScore} out of 100. We'll track how this moves week on week."
+            "Your Sharpness score is {pillarScore} out of 100."
           </p>
         </div>
 
