@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeDualTaskScore, computeChoiceRTScore, computeCategorySwitchScore, computeSharpnessPillarScore } from '@/lib/sharpness-scoring';
+import { savePillarScore } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight } from 'lucide-react';
@@ -34,6 +35,14 @@ export default function SharpnessScoreOutput() {
       sharpness_pillar_score: pillarScore,
     });
     localStorage.setItem('bfs_sharpness_sessions', JSON.stringify(existing));
+    // Save pillar score for BFS scoring
+    if (participant) {
+      savePillarScore(participant.participant_id, {
+        sharpness_raw: pillarScore,
+        sharpness_simon_effect_ms: choiceRT.simonEffect,
+        sharpness_rt_switch_cost_ms: categorySwitch.rtSwitchCost,
+      });
+    }
     setSaved(true);
   };
 

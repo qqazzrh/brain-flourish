@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
-import { getParticipantSessions } from '@/lib/storage';
+import { getParticipantSessions, getPillarScores } from '@/lib/storage';
 import { AgeBand, DemandProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,15 +22,19 @@ export default function BFSScoring() {
   const autoAge = participant?.demographics?.age_band || '';
   const autoProfile = participant?.demographics?.demand_profile || '';
 
-  // Input state — pre-fill from demographics
+  // Auto-load pillar scores from completed tests
+  const pillarScores = participant ? getPillarScores(participant.participant_id) : null;
+  const hasAutoScores = !!(pillarScores?.recall_raw != null || pillarScores?.lockin_raw != null || pillarScores?.sharpness_raw != null);
+
+  // Input state — pre-fill from demographics and test results
   const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
   const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
-  const [recallRaw, setRecallRaw] = useState('');
-  const [lockinRaw, setLockinRaw] = useState('');
-  const [sharpnessRaw, setSharpnessRaw] = useState('');
+  const [recallRaw, setRecallRaw] = useState(pillarScores?.recall_raw != null ? String(pillarScores.recall_raw) : '');
+  const [lockinRaw, setLockinRaw] = useState(pillarScores?.lockin_raw != null ? String(pillarScores.lockin_raw) : '');
+  const [sharpnessRaw, setSharpnessRaw] = useState(pillarScores?.sharpness_raw != null ? String(pillarScores.sharpness_raw) : '');
 
   // Secondary scores (for facilitator display)
-  const [fluencyScore, setFluencyScore] = useState('');
+  const [fluencyScore, setFluencyScore] = useState(pillarScores?.recall_fluency != null ? String(pillarScores.recall_fluency) : '');
 
   // Result
   const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
@@ -118,6 +122,14 @@ export default function BFSScoring() {
             {/* Raw Pillar Scores */}
             <div className="card-elevated p-6 space-y-4">
               <p className="text-display text-sm text-primary">RAW PILLAR SCORES</p>
+              {hasAutoScores && (
+                <div className="bg-success/10 border border-success/20 rounded-lg px-4 py-2 text-xs text-success font-medium">
+                  ✓ Scores auto-populated from completed tests
+                  {pillarScores?.recall_raw != null && ' • Recall ✓'}
+                  {pillarScores?.lockin_raw != null && ' • Lock-In ✓'}
+                  {pillarScores?.sharpness_raw != null && ' • Sharpness ✓'}
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Recall</label>

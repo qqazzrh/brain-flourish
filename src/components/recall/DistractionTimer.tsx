@@ -15,6 +15,7 @@ export default function DistractionTimer() {
   const [timeUp, setTimeUp] = useState(false);
   const [tappedOptions, setTappedOptions] = useState<string[]>([]);
   const [lastTapResult, setLastTapResult] = useState<{ option: string; valid: boolean } | null>(null);
+  const [manualValidCount, setManualValidCount] = useState(0);
   const chimeRef = useRef<boolean>(false);
 
   // Generate shuffled list of options to display
@@ -22,14 +23,20 @@ export default function DistractionTimer() {
     return shuffleOptions([...optionSet.validOptions]);
   }, [optionSet]);
 
-  const validCount = tappedOptions.filter((opt, idx) => {
-    // Valid if it's the first occurrence AND in validOptions
-    const isValid = optionSet.validOptions.includes(opt);
-    const isFirstOccurrence = tappedOptions.indexOf(opt) === idx;
-    return isValid && isFirstOccurrence;
+  const listValidCount = tappedOptions.filter((opt, idx) => {
+    if (opt.startsWith('__MANUAL_VALID_') || opt === '__INVALID__') return false;
+    return optionSet.validOptions.includes(opt) && tappedOptions.indexOf(opt) === idx;
   }).length;
 
-  const invalidCount = tappedOptions.length - validCount;
+  const validCount = listValidCount + manualValidCount;
+
+  const invalidCount = tappedOptions.filter(opt =>
+    !opt.startsWith('__MANUAL_VALID_') && (
+      opt === '__INVALID__' ||
+      !optionSet.validOptions.includes(opt) ||
+      tappedOptions.indexOf(opt) !== tappedOptions.lastIndexOf(opt)
+    )
+  ).length;
 
   useEffect(() => {
     if (timeUp) return;
@@ -125,12 +132,27 @@ export default function DistractionTimer() {
             )}
           </div>
 
-          {/* Tappable option grid */}
-          <div className="mb-4">
+          {/* Action buttons */}
+          <div className="flex gap-3 mb-4">
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 border-success text-success hover:bg-success/10"
+              onClick={() => {
+                const manualKey = `__MANUAL_VALID_${Date.now()}`;
+                setTappedOptions(prev => [...prev, manualKey]);
+                // Count manual valids by adding to a special list
+                setManualValidCount(prev => prev + 1);
+                setLastTapResult({ option: 'Valid (manual)', valid: true });
+                setTimeout(() => setLastTapResult(null), 800);
+              }}
+            >
+              <Check className="w-5 h-5 mr-2" /> Valid Answer
+            </Button>
             <Button
               variant="destructive"
               size="lg"
-              className="w-full"
+              className="flex-1"
               onClick={() => {
                 setTappedOptions(prev => [...prev, '__INVALID__']);
                 setLastTapResult({ option: 'Invalid', valid: false });
