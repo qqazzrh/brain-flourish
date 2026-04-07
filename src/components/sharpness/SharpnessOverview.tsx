@@ -3,7 +3,17 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 export default function SharpnessOverview() {
-  const { goToScreen } = useSharpness();
+  const { goToScreen, setSkipPractice } = useSharpness();
+
+  const handleWithPractice = () => {
+    setSkipPractice(false);
+    goToScreen(2);
+  };
+
+  const handleSkipPractice = () => {
+    setSkipPractice(true);
+    goToScreen(2);
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
@@ -29,14 +39,14 @@ export default function SharpnessOverview() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">Total time: about 4 minutes. Each part includes a short practice round.</p>
+        <p className="text-center text-sm text-muted-foreground">Total time: about 4 minutes.</p>
 
         <div className="space-y-3">
-          <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
-            Begin with Practice
+          <Button variant="hero" size="xl" className="w-full" onClick={handleWithPractice}>
+            Begin with Practice Rounds
           </Button>
-          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={() => goToScreen(2)}>
-            Skip All Practices — Start Real Tests
+          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={handleSkipPractice}>
+            Skip Practices — Start Real Tests
           </Button>
         </div>
       </div>
