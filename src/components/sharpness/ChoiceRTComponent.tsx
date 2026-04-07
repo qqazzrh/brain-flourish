@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 const TOTAL_DURATION = 60;
+const PRACTICE_DURATION = 10;
 const RULE_BLOCK_DURATION = 15;
 const STIMULUS_CYCLE = 1000;
 const STIMULUS_DISPLAY = 200;
@@ -25,15 +26,18 @@ function getOpposite(pos: number): number {
   return map[pos];
 }
 
+type Phase = 'instructions' | 'practice' | 'practiceComplete' | 'real';
+
 export default function ChoiceRTComponent() {
   const { goToScreen, addChoiceRTResponse } = useSharpness();
-  const [started, setStarted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TOTAL_DURATION);
+  const [phase, setPhase] = useState<Phase>('instructions');
+  const [timeLeft, setTimeLeft] = useState(PRACTICE_DURATION);
   const [flashingBox, setFlashingBox] = useState<number | null>(null);
   const [currentRule, setCurrentRule] = useState<'compatible' | 'incompatible'>('compatible');
   const [ruleFlash, setRuleFlash] = useState(false);
+  const [lastFeedback, setLastFeedback] = useState<'correct' | 'wrong' | null>(null);
 
-  const sequenceRef = useRef(generateChoiceSequence(65));
+  const sequenceRef = useRef(generateChoiceSequence(70));
   const indexRef = useRef(0);
   const tappedRef = useRef(false);
   const stimOnsetRef = useRef(0);
@@ -47,27 +51,35 @@ export default function ChoiceRTComponent() {
     return block % 2 === 0 ? 'compatible' : 'incompatible';
   }, []);
 
-  const processResponse = useCallback(() => {
+  const cleanup = useCallback(() => {
+    activeRef.current = false;
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (cycleRef.current) clearTimeout(cycleRef.current);
+  }, []);
+
+  const processResponse = useCallback((isPractice: boolean) => {
     if (!activeRef.current) return;
     const idx = indexRef.current;
     const seq = sequenceRef.current;
     if (idx >= seq.length) return;
 
     if (!tappedRef.current) {
-      addChoiceRTResponse({
-        trial_index: idx,
-        stimulus_position: seq[idx],
-        rule: getCurrentRule(),
-        correct_response: getCurrentRule() === 'compatible' ? seq[idx] : getOpposite(seq[idx]),
-        actual_response: null,
-        stimulus_onset: new Date().toISOString(),
-        response_time_ms: null,
-        correct: false,
-      });
+      if (!isPractice) {
+        addChoiceRTResponse({
+          trial_index: idx,
+          stimulus_position: seq[idx],
+          rule: getCurrentRule(),
+          correct_response: getCurrentRule() === 'compatible' ? seq[idx] : getOpposite(seq[idx]),
+          actual_response: null,
+          stimulus_onset: new Date().toISOString(),
+          response_time_ms: null,
+          correct: false,
+        });
+      }
     }
   }, [addChoiceRTResponse, getCurrentRule]);
 
-  const runCycle = useCallback(() => {
+  const runCycle = useCallback((isPractice: boolean) => {
     if (!activeRef.current) return;
     const seq = sequenceRef.current;
     if (indexRef.current >= seq.length) return;
@@ -78,11 +90,11 @@ export default function ChoiceRTComponent() {
 
     setFlashingBox(pos);
     setTimeout(() => { if (activeRef.current) setFlashingBox(null); }, STIMULUS_DISPLAY);
-    setTimeout(() => processResponse(), 800);
+    setTimeout(() => processResponse(isPractice), 800);
 
     cycleRef.current = setTimeout(() => {
       indexRef.current++;
-      runCycle();
+      runCycle(isPractice);
     }, STIMULUS_CYCLE);
   }, [processResponse]);
 
@@ -97,21 +109,56 @@ export default function ChoiceRTComponent() {
     const seq = sequenceRef.current;
     const rule = getCurrentRule();
     const correctZone = rule === 'compatible' ? seq[idx] : getOpposite(seq[idx]);
+    const isCorrect = zone === correctZone;
 
-    addChoiceRTResponse({
-      trial_index: idx,
-      stimulus_position: seq[idx],
-      rule,
-      correct_response: correctZone,
-      actual_response: zone,
-      stimulus_onset: new Date().toISOString(),
-      response_time_ms: rt,
-      correct: zone === correctZone,
-    });
-  }, [addChoiceRTResponse, getCurrentRule]);
+    if (phase === 'practice') {
+      // Show feedback during practice
+      setLastFeedback(isCorrect ? 'correct' : 'wrong');
+      setTimeout(() => setLastFeedback(null), 400);
+    } else {
+      addChoiceRTResponse({
+        trial_index: idx,
+        stimulus_position: seq[idx],
+        rule,
+        correct_response: correctZone,
+        actual_response: zone,
+        stimulus_onset: new Date().toISOString(),
+        response_time_ms: rt,
+        correct: isCorrect,
+      });
+    }
+  }, [addChoiceRTResponse, getCurrentRule, phase]);
 
-  useEffect(() => {
-    if (!started) return;
+  const startPractice = useCallback(() => {
+    setPhase('practice');
+    setTimeLeft(PRACTICE_DURATION);
+    elapsedRef.current = 0;
+    indexRef.current = 0;
+    setCurrentRule('compatible');
+    activeRef.current = true;
+
+    timerRef.current = setInterval(() => {
+      elapsedRef.current++;
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          cleanup();
+          setPhase('practiceComplete');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    runCycle(true);
+  }, [cleanup, runCycle]);
+
+  const startReal = useCallback(() => {
+    setPhase('real');
+    setTimeLeft(TOTAL_DURATION);
+    elapsedRef.current = 0;
+    indexRef.current = 0;
+    sequenceRef.current = generateChoiceSequence(70);
+    setCurrentRule('compatible');
     activeRef.current = true;
 
     timerRef.current = setInterval(() => {
@@ -127,26 +174,23 @@ export default function ChoiceRTComponent() {
 
       setTimeLeft(prev => {
         if (prev <= 1) {
-          activeRef.current = false;
-          if (timerRef.current) clearInterval(timerRef.current);
-          if (cycleRef.current) clearTimeout(cycleRef.current);
-          goToScreen(8);
+          cleanup();
+          goToScreen(9);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    runCycle();
+    runCycle(false);
+  }, [cleanup, goToScreen, runCycle]);
 
-    return () => {
-      activeRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (cycleRef.current) clearTimeout(cycleRef.current);
-    };
-  }, [started]);
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
-  if (!started) {
+  // Instructions screen
+  if (phase === 'instructions') {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
@@ -161,29 +205,67 @@ export default function ChoiceRTComponent() {
             <p className="text-sm text-muted-foreground">The current rule is always shown at the top of the screen.</p>
             <p className="text-base font-bold text-foreground">Go as fast as you can.</p>
           </div>
-          <p className="text-sm text-muted-foreground">60 seconds.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => setStarted(true)}>
-            Start
+          <p className="text-sm text-muted-foreground">Let's try a quick 10-second practice first.</p>
+          <Button variant="hero" size="xl" className="w-full" onClick={startPractice}>
+            Start Practice
           </Button>
         </div>
       </motion.div>
     );
   }
 
+  // Practice complete screen
+  if (phase === 'practiceComplete') {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+        <div className="w-full max-w-lg space-y-6 text-center">
+          <p className="text-display text-sm text-primary">PART 2 — REACTION SPEED</p>
+          <div className="card-elevated p-6 space-y-3">
+            <p className="text-display text-lg text-foreground">Practice Complete!</p>
+            <p className="text-base text-muted-foreground">
+              Good job. Now the real test begins — 60 seconds. The rule will switch between TAP THE BOX and TAP OPPOSITE every 15 seconds.
+            </p>
+            <p className="text-base font-bold text-foreground">Go as fast as you can.</p>
+          </div>
+          <Button variant="hero" size="xl" className="w-full" onClick={startReal}>
+            Start Real Test
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Active test (practice or real)
+  const isPractice = phase === 'practice';
+  const label = isPractice ? 'PRACTICE' : (currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE');
+
   return (
     <div className="min-h-screen flex flex-col bg-background select-none">
       {/* Header with rule */}
       <div className={`px-6 py-3 flex items-center justify-between border-b transition-colors ${ruleFlash ? 'bg-warning/20' : ''}`}>
         <div>
-          <span className="text-sm text-muted-foreground">Rule: </span>
-          <span className={`text-display text-lg ${currentRule === 'compatible' ? 'text-success' : 'text-destructive'}`}>
-            {currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE'}
-          </span>
+          {isPractice ? (
+            <span className="text-display text-lg text-warning">PRACTICE</span>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">Rule: </span>
+              <span className={`text-display text-lg ${currentRule === 'compatible' ? 'text-success' : 'text-destructive'}`}>
+                {currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE'}
+              </span>
+            </>
+          )}
         </div>
         <span className="text-sm font-mono text-muted-foreground">
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
         </span>
       </div>
+
+      {/* Feedback during practice */}
+      {isPractice && lastFeedback && (
+        <div className={`text-center py-1 text-sm font-bold ${lastFeedback === 'correct' ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}>
+          {lastFeedback === 'correct' ? '✓ Correct!' : '✗ Wrong'}
+        </div>
+      )}
 
       {/* Stimulus boxes */}
       <div className="flex-1 flex items-center justify-center px-6">
