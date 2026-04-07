@@ -29,8 +29,8 @@ function getOpposite(pos: number): number {
 type Phase = 'instructions' | 'practice' | 'practiceComplete' | 'real';
 
 export default function ChoiceRTComponent() {
-  const { goToScreen, addChoiceRTResponse } = useSharpness();
-  const [phase, setPhase] = useState<Phase>('instructions');
+  const { state, goToScreen, addChoiceRTResponse } = useSharpness();
+  const [phase, setPhase] = useState<Phase>(state.skipPractice ? 'instructions' : 'instructions');
   const [timeLeft, setTimeLeft] = useState(PRACTICE_DURATION);
   const [flashingBox, setFlashingBox] = useState<number | null>(null);
   const [currentRule, setCurrentRule] = useState<'compatible' | 'incompatible'>('compatible');
