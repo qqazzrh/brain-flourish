@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
-import { getParticipantSessions } from '@/lib/storage';
+import { getParticipantSessions, getPillarScores } from '@/lib/storage';
 import { AgeBand, DemandProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
