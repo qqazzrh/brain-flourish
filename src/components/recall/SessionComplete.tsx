@@ -1,19 +1,24 @@
 import { useMemo, useState } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
-import { PASSAGE_FORMS, FORM_DOMAINS } from '@/lib/content-library';
+import { useSession } from '@/contexts/SessionContext';
+import { PASSAGE_FORMS, FORM_DOMAINS, DISTRACTION_TASKS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
 import { saveSession, generateSessionId, saveParticipant } from '@/lib/storage';
 import { motion } from 'framer-motion';
-import { Check, X, Edit3, Save, FileDown } from 'lucide-react';
+import { Check, X, Edit3, Save, FileDown, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const CATEGORY_ORDER: UnitCategory[] = ['WHO', 'WHAT', 'WHERE', 'WHEN', 'SPECIFIC'];
 const CAT_LABEL: Record<UnitCategory, string> = { WHO: 'Who', WHAT: 'What', WHERE: 'Where', WHEN: 'When', SPECIFIC: 'Specific' };
 
 export default function SessionComplete() {
-  const { state, goToScreen, setScoreEdited, resetSession } = useRecall();
+  const { state, goToScreen, setScoreEdited, resetRecall } = useRecall();
+  const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime } = useSession();
+  const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
-  const passage = PASSAGE_FORMS[state.assignedForm];
+  const passage = PASSAGE_FORMS[assignedForm];
+  const task = DISTRACTION_TASKS[assignedForm];
   const units = passage.scoreable_units;
 
   const categoryScores = useMemo(() => {
@@ -31,45 +36,36 @@ export default function SessionComplete() {
 
   const rawScore = state.recalledUnits.size;
   const pillarScore = Math.round((rawScore / 20) * 100);
-  const sessionDuration = state.sessionStartTime
-    ? Math.round((Date.now() - new Date(state.sessionStartTime).getTime()) / 1000)
-    : 0;
-  const sessionMins = Math.floor(sessionDuration / 60);
-  const sessionSecs = sessionDuration % 60;
+  const sessionDuration = sessionStartTime ? Math.round((Date.now() - new Date(sessionStartTime).getTime()) / 1000) : 0;
 
-  const handleEditScore = () => {
-    setScoreEdited();
-    goToScreen(5);
-  };
+  const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
 
   const handleSave = () => {
-    if (!state.participant) return;
+    if (!participant) return;
     const sessionId = generateSessionId();
     const now = new Date().toISOString();
     const session: SessionRecord = {
       session_id: sessionId,
-      participant_id: state.participant.participant_id,
-      participant_type: state.participantType,
-      session_number: state.participant.session_count + 1,
-      facilitator_id: state.facilitator?.id || '',
-      location: state.location,
-      timestamp_start: state.sessionStartTime || now,
+      participant_id: participant.participant_id,
+      participant_type: participantType,
+      session_number: participant.session_count + 1,
+      facilitator_id: facilitator?.id || '',
+      location,
+      timestamp_start: sessionStartTime || now,
       timestamp_end: now,
       session_duration_seconds: sessionDuration,
-      practice: state.isPractice,
+      practice: isPractice,
       recall_test: {
-        form_id: state.assignedForm,
-        passage_domain: FORM_DOMAINS[state.assignedForm],
-        distraction_category: passage.form_id,
-        distraction_letter: '',
+        form_id: assignedForm,
+        passage_domain: FORM_DOMAINS[assignedForm],
+        distraction_category: task.category,
+        distraction_letter: task.letter,
         distraction_valid_count: state.distractionValidCount,
         distraction_invalid_count: state.distractionInvalidCount,
         distraction_duration_seconds: 90,
         distraction_timer_start: state.distractionTimerStart,
         one_time_prompt_used: state.oneTimePromptUsed,
-        recall_duration_seconds: state.recallStartTime
-          ? Math.round((Date.now() - new Date(state.recallStartTime).getTime()) / 1000)
-          : 0,
+        recall_duration_seconds: state.recallStartTime ? Math.round((Date.now() - new Date(state.recallStartTime).getTime()) / 1000) : 0,
         recall_timer_used: state.recallTimerUsed,
         units_recalled: Array.from(state.recalledUnits),
         units_missed: units.filter(u => !state.recalledUnits.has(u.unit_id)).map(u => u.unit_id),
@@ -83,44 +79,40 @@ export default function SessionComplete() {
       },
     };
     saveSession(session);
-
-    // Update participant
-    const updatedP = { ...state.participant };
+    const updatedP = { ...participant };
     updatedP.session_count += 1;
     updatedP.last_session_date = now.split('T')[0];
     updatedP.last_recall_raw_score = rawScore;
     updatedP.sessions = [...updatedP.sessions, sessionId];
     saveParticipant(updatedP);
-
     setSaved(true);
   };
 
-  const handleNewSession = () => {
-    resetSession();
+  const handleNextTest = () => {
+    resetRecall();
+    navigate('/lock-in');
+  };
+
+  const handleBackToHub = () => {
+    resetRecall();
+    navigate('/');
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
-        {/* Header */}
         <div className="text-center space-y-1">
           <h1 className="text-display text-2xl text-foreground">RECALL TEST COMPLETE</h1>
-          {state.isPractice && (
-            <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">
-              Practice Session
-            </span>
-          )}
+          {isPractice && <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">Practice Session</span>}
         </div>
 
-        {/* Session info */}
         <div className="card-elevated p-5 space-y-2">
-          <InfoRow label="Participant" value={state.participant?.participant_id || ''} />
-          <InfoRow label="Session" value={`${(state.participant?.session_count || 0) + 1} of series`} />
-          <InfoRow label="Form used" value={`${state.assignedForm} (${FORM_DOMAINS[state.assignedForm]})`} />
-          <InfoRow label="Session time" value={`${sessionMins} min ${sessionSecs} sec`} />
+          <InfoRow label="Participant" value={participant?.participant_id || ''} />
+          <InfoRow label="Session" value={`${(participant?.session_count || 0) + 1} of series`} />
+          <InfoRow label="Form used" value={`${assignedForm} (${FORM_DOMAINS[assignedForm]})`} />
+          <InfoRow label="Session time" value={`${Math.floor(sessionDuration / 60)} min ${sessionDuration % 60} sec`} />
         </div>
 
-        {/* Raw Score */}
         <div className="card-elevated p-8 text-center space-y-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">Raw Score</p>
           <p className="text-display text-6xl text-primary">{rawScore}<span className="text-2xl text-muted-foreground"> / 20</span></p>
@@ -130,7 +122,6 @@ export default function SessionComplete() {
           </div>
         </div>
 
-        {/* Category Breakdown */}
         <div className="card-elevated p-5 space-y-4">
           <h3 className="text-display text-base text-foreground">Category Breakdown</h3>
           {CATEGORY_ORDER.map(cat => {
@@ -141,26 +132,20 @@ export default function SessionComplete() {
                 <span className="w-20 text-sm text-muted-foreground">{CAT_LABEL[cat]} ({cs.max})</span>
                 <div className="flex-1 flex gap-1">
                   {Array.from({ length: cs.max }).map((_, i) => (
-                    <span key={i} className={`w-6 h-6 rounded flex items-center justify-center ${
-                      i < cs.score ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'
-                    }`}>
+                    <span key={i} className={`w-6 h-6 rounded flex items-center justify-center ${i < cs.score ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
                       {i < cs.score ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                     </span>
                   ))}
                 </div>
-                <span className="text-sm font-medium text-foreground">
-                  {cs.score} / {cs.max} {cs.score === cs.max && '✓'}
-                </span>
+                <span className="text-sm font-medium text-foreground">{cs.score} / {cs.max} {cs.score === cs.max && '✓'}</span>
               </div>
             );
           })}
-
           <div className="border-t pt-3">
             <InfoRow label="Distraction" value={`${state.distractionValidCount} valid responses`} />
           </div>
         </div>
 
-        {/* Script */}
         <div className="card-sunken p-5 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
           <p className="text-lg text-foreground leading-relaxed">
@@ -169,7 +154,6 @@ export default function SessionComplete() {
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           {!saved ? (
             <>
@@ -182,15 +166,13 @@ export default function SessionComplete() {
             </>
           ) : (
             <div className="w-full space-y-3">
-              <div className="text-center p-4 bg-success/10 text-success rounded-lg font-medium">
-                ✓ Session saved successfully
-              </div>
+              <div className="text-center p-4 bg-success/10 text-success rounded-lg font-medium">✓ Session saved successfully</div>
               <div className="flex gap-3">
-                <Button variant="hero" size="xl" className="flex-1" onClick={handleNewSession}>
-                  New Session
+                <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleNextTest}>
+                  <ArrowRight className="w-5 h-5" /> Next: Lock-In Test
                 </Button>
-                <Button variant="outline" size="xl" className="gap-2">
-                  <FileDown className="w-5 h-5" /> Export Scorecard
+                <Button variant="outline" size="xl" className="gap-2" onClick={handleBackToHub}>
+                  Back to Hub
                 </Button>
               </div>
             </div>
