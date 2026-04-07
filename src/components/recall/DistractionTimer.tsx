@@ -126,6 +126,21 @@ export default function DistractionTimer() {
           </div>
 
           {/* Tappable option grid */}
+          <div className="mb-4">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                setTappedOptions(prev => [...prev, '__INVALID__']);
+                setLastTapResult({ option: 'Invalid', valid: false });
+                setTimeout(() => setLastTapResult(null), 800);
+              }}
+            >
+              <X className="w-5 h-5 mr-2" /> Mark Invalid
+            </Button>
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             <p className="text-sm text-muted-foreground mb-3">
               Tap each {optionSet.category.toLowerCase()} the participant names. Repeats are automatically marked invalid.
