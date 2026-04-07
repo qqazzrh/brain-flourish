@@ -18,9 +18,13 @@ export default function BFSScoring() {
   const { participant } = useSession();
   const [screen, setScreen] = useState<Screen>('input');
 
-  // Input state
-  const [ageBand, setAgeBand] = useState<AgeBand | ''>('');
-  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>('');
+  const hasDemographics = !!participant?.demographics;
+  const autoAge = participant?.demographics?.age_band || '';
+  const autoProfile = participant?.demographics?.demand_profile || '';
+
+  // Input state — pre-fill from demographics
+  const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
+  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
   const [recallRaw, setRecallRaw] = useState('');
   const [lockinRaw, setLockinRaw] = useState('');
   const [sharpnessRaw, setSharpnessRaw] = useState('');
@@ -68,13 +72,21 @@ export default function BFSScoring() {
               {participant && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>ID: <strong className="text-foreground">{participant.participant_id}</strong></span>
+                  {participant.demographics && (
+                    <span className="ml-2">• <strong className="text-foreground">{participant.demographics.name}</strong></span>
+                  )}
+                </div>
+              )}
+              {hasDemographics && (
+                <div className="bg-success/10 border border-success/20 rounded-lg px-4 py-2 text-xs text-success font-medium">
+                  ✓ Biodata auto-populated from participant registration
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Age Band</label>
-                  <Select value={ageBand} onValueChange={(v) => setAgeBand(v as AgeBand)}>
-                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <Select value={ageBand} onValueChange={(v) => setAgeBand(v as AgeBand)} disabled={hasDemographics}>
+                    <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
                       {AGE_BANDS.map(ab => (
                         <SelectItem key={ab} value={ab}>{ab}</SelectItem>
@@ -84,8 +96,8 @@ export default function BFSScoring() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Demand Profile</label>
-                  <Select value={demandProfile} onValueChange={(v) => setDemandProfile(v as DemandProfile)}>
-                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <Select value={demandProfile} onValueChange={(v) => setDemandProfile(v as DemandProfile)} disabled={hasDemographics}>
+                    <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
                       {DEMAND_PROFILES.map(dp => (
                         <SelectItem key={dp} value={dp}>{dp}</SelectItem>
@@ -94,6 +106,13 @@ export default function BFSScoring() {
                   </Select>
                 </div>
               </div>
+              {hasDemographics && participant?.demographics && (
+                <div className="grid grid-cols-3 gap-3 text-xs text-muted-foreground pt-2 border-t">
+                  <div><span className="block text-foreground font-medium">{formatOccupationLabel(participant.demographics.occupation_type)}</span>Occupation</div>
+                  <div><span className="block text-foreground font-medium">{formatSeniorityLabel(participant.demographics.seniority_level)}</span>Seniority</div>
+                  <div><span className="block text-foreground font-medium">{formatEducationLabel(participant.demographics.education_level)}</span>Education</div>
+                </div>
+              )}
             </div>
 
             {/* Raw Pillar Scores */}
@@ -433,4 +452,29 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-foreground">{value}</span>
     </div>
   );
+}
+
+function formatOccupationLabel(type: string): string {
+  const map: Record<string, string> = {
+    'knowledge-worker': 'Knowledge Worker', 'creative': 'Creative',
+    'student': 'Student', 'blue-collar': 'Blue Collar', 'unemployed': 'Unemployed',
+  };
+  return map[type] || type;
+}
+
+function formatSeniorityLabel(level: string): string {
+  const map: Record<string, string> = {
+    'entry': 'Entry', 'mid': 'Mid', 'senior': 'Senior',
+    'executive': 'Executive', 'not-applicable': 'N/A',
+  };
+  return map[level] || level;
+}
+
+function formatEducationLabel(level: string): string {
+  const map: Record<string, string> = {
+    'high-school': 'High School', 'some-college': 'Some College',
+    'bachelors': "Bachelor's", 'masters': "Master's",
+    'doctorate': 'Doctorate', 'other': 'Other',
+  };
+  return map[level] || level;
 }
