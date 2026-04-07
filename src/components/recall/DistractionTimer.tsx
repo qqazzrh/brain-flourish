@@ -24,13 +24,22 @@ export default function DistractionTimer() {
   }, [optionSet]);
 
   const validCount = tappedOptions.filter((opt, idx) => {
-    // Valid if it's the first occurrence AND in validOptions
+    if (opt.startsWith('__MANUAL_VALID_')) return false; // counted separately
+    if (opt === '__INVALID__') return false;
     const isValid = optionSet.validOptions.includes(opt);
     const isFirstOccurrence = tappedOptions.indexOf(opt) === idx;
     return isValid && isFirstOccurrence;
+  }).length + manualValidCount;
+
+  const invalidCount = tappedOptions.filter(opt => {
+    if (opt.startsWith('__MANUAL_VALID_')) return false;
+    if (opt === '__INVALID__') return true;
+    const isRepeat = tappedOptions.indexOf(opt) !== tappedOptions.lastIndexOf(opt) && tappedOptions.indexOf(opt) !== tappedOptions.lastIndexOf(opt);
+    return !optionSet.validOptions.includes(opt) || tappedOptions.indexOf(opt) !== tappedOptions.lastIndexOf(opt);
   }).length;
 
-  const invalidCount = tappedOptions.length - validCount;
+  // Simpler count: total taps minus valid taps minus manual valids
+  const actualInvalidCount = tappedOptions.filter(opt => !opt.startsWith('__MANUAL_VALID_')).length - (validCount - manualValidCount);
 
   useEffect(() => {
     if (timeUp) return;
