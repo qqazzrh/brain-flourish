@@ -190,7 +190,7 @@ export default function DualTaskComponent() {
           cleanup();
           if (blockPhase === 'blockA') setPhase('instrB');
           else if (blockPhase === 'blockB') setPhase('instrC');
-          else if (blockPhase === 'blockC') goToScreen(6);
+          else if (blockPhase === 'blockC') goToScreen(7);
           return 0;
         }
         return prev - 1;
