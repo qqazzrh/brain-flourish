@@ -205,10 +205,21 @@ export default function ChoiceRTComponent() {
             <p className="text-sm text-muted-foreground">The current rule is always shown at the top of the screen.</p>
             <p className="text-base font-bold text-foreground">Go as fast as you can.</p>
           </div>
-          <p className="text-sm text-muted-foreground">Let's try a quick 10-second practice first.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={startPractice}>
-            Start Practice
-          </Button>
+          {state.skipPractice ? (
+            <Button variant="hero" size="xl" className="w-full" onClick={startReal}>
+              Start Real Test
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Let's try a quick 10-second practice first.</p>
+              <Button variant="hero" size="xl" className="w-full" onClick={startPractice}>
+                Start Practice
+              </Button>
+              <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={startReal}>
+                Skip Practice — Start Real Test
+              </Button>
+            </div>
+          )}
         </div>
       </motion.div>
     );

@@ -18,7 +18,7 @@ const PRACTICE_DURATION = 10;
 type Phase = 'instructions' | 'practice' | 'practice_done' | 'real';
 
 export default function CategorySwitchComponent() {
-  const { goToScreen, addCategorySwitchResponse } = useSharpness();
+  const { state, goToScreen, addCategorySwitchResponse } = useSharpness();
   const [phase, setPhase] = useState<Phase>('instructions');
   const [timeLeft, setTimeLeft] = useState(PRACTICE_DURATION);
   const [trialIndex, setTrialIndex] = useState(0);
@@ -141,10 +141,21 @@ export default function CategorySwitchComponent() {
             <p className="text-sm text-muted-foreground">The current rule is always shown at the top. Rules change every 3 answers.</p>
             <p className="text-base font-bold text-foreground">Speed and accuracy both matter.</p>
           </div>
-          <p className="text-sm text-muted-foreground">10-second practice, then 60-second real test.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => startPhase('practice')}>
-            Start Practice
-          </Button>
+          {state.skipPractice ? (
+            <Button variant="hero" size="xl" className="w-full" onClick={() => startPhase('real')}>
+              Start Real Test
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">10-second practice, then 60-second real test.</p>
+              <Button variant="hero" size="xl" className="w-full" onClick={() => startPhase('practice')}>
+                Start Practice
+              </Button>
+              <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={() => startPhase('real')}>
+                Skip Practice — Start Real Test
+              </Button>
+            </div>
+          )}
         </div>
       </motion.div>
     );
