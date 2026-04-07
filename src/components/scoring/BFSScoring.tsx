@@ -129,7 +129,7 @@ export default function BFSScoring() {
                   {pillarScores?.lockin_raw != null && ' • Lock-In ✓'}
                   {pillarScores?.sharpness_raw != null && ' • Sharpness ✓'}
                 </div>
-              )
+              )}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Recall</label>
