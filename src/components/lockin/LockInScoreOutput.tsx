@@ -120,8 +120,7 @@ export default function LockInScoreOutput() {
         <div className="card-sunken p-5 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
           <p className="text-lg text-foreground leading-relaxed">
-            "Your Lock-In score is {scores.pillarScore} out of 100.
-            We'll track how this moves week on week."
+            "Your Lock-In score is {scores.pillarScore} out of 100."
           </p>
         </div>
 
