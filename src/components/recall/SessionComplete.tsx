@@ -97,11 +97,6 @@ export default function SessionComplete() {
     setSaved(true);
   };
 
-  const handleNextTest = () => {
-    resetRecall();
-    navigate('/lock-in');
-  };
-
   const handleBackToHub = () => {
     resetRecall();
     navigate('/');
@@ -176,14 +171,9 @@ export default function SessionComplete() {
           ) : (
             <div className="w-full space-y-3">
               <div className="text-center p-4 bg-success/10 text-success rounded-lg font-medium">✓ Session saved successfully</div>
-              <div className="flex gap-3">
-                <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleNextTest}>
-                  <ArrowRight className="w-5 h-5" /> Next: Lock-In Test
-                </Button>
-                <Button variant="outline" size="xl" className="gap-2" onClick={handleBackToHub}>
-                  Back to Hub
-                </Button>
-              </div>
+              <Button variant="hero" size="xl" className="w-full gap-2" onClick={handleBackToHub}>
+                <ArrowRight className="w-5 h-5" /> Back to Tests
+              </Button>
             </div>
           )}
         </div>
