@@ -12,6 +12,28 @@ const RULE_DESCRIPTIONS: Record<Rule, string> = {
   letter: 'Pick same first letter',
   syllables: 'Pick same syllable count',
 };
+
+const RULE_COLORS: Record<Rule, { bg: string; border: string; text: string; bannerBg: string }> = {
+  meaning: {
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    border: 'border-blue-300 dark:border-blue-700',
+    text: 'text-blue-700 dark:text-blue-300',
+    bannerBg: 'bg-blue-500',
+  },
+  letter: {
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
+    border: 'border-amber-300 dark:border-amber-700',
+    text: 'text-amber-700 dark:text-amber-300',
+    bannerBg: 'bg-amber-500',
+  },
+  syllables: {
+    bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+    border: 'border-emerald-300 dark:border-emerald-700',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    bannerBg: 'bg-emerald-500',
+  },
+};
+
 const TOTAL_DURATION = 60;
 const PRACTICE_DURATION = 10;
 
@@ -39,6 +61,7 @@ export default function CategorySwitchComponent() {
   const currentRule: Rule = RULES[ruleIndex % 3];
   const currentTrial: WordTrial | undefined = wordSet[trialIndex];
   const isSwitchTrial = trialInBlock === 0 && trialIndex > 0;
+  const colors = RULE_COLORS[currentRule];
 
   const shuffledOptions = useMemo(() => {
     if (!currentTrial) return [];
@@ -132,13 +155,22 @@ export default function CategorySwitchComponent() {
           <p className="text-display text-sm text-primary">PART 3 — CATEGORY SWITCH</p>
           <div className="card-elevated p-6 space-y-4 text-left">
             <p className="text-lg text-foreground">A word appears. Pick the best match from three options.</p>
-            <p className="text-base text-foreground font-medium">The matching rule changes:</p>
-            <div className="space-y-2 pl-2">
-              <p className="text-base text-foreground"><span className="font-bold text-primary">MEANING</span> → pick the closest meaning</p>
-              <p className="text-base text-foreground"><span className="font-bold text-primary">FIRST LETTER</span> → pick same first letter</p>
-              <p className="text-base text-foreground"><span className="font-bold text-primary">SYLLABLES</span> → pick same syllable count</p>
+            <p className="text-base text-foreground font-medium">The matching rule changes — watch for the color:</p>
+            <div className="space-y-3 pl-2">
+              <div className={`rounded-lg px-4 py-3 ${RULE_COLORS.meaning.bg} border ${RULE_COLORS.meaning.border}`}>
+                <span className={`font-bold ${RULE_COLORS.meaning.text}`}>🔵 MEANING</span>
+                <span className="text-foreground ml-2">→ pick the closest meaning</span>
+              </div>
+              <div className={`rounded-lg px-4 py-3 ${RULE_COLORS.letter.bg} border ${RULE_COLORS.letter.border}`}>
+                <span className={`font-bold ${RULE_COLORS.letter.text}`}>🟡 FIRST LETTER</span>
+                <span className="text-foreground ml-2">→ pick same first letter</span>
+              </div>
+              <div className={`rounded-lg px-4 py-3 ${RULE_COLORS.syllables.bg} border ${RULE_COLORS.syllables.border}`}>
+                <span className={`font-bold ${RULE_COLORS.syllables.text}`}>🟢 SYLLABLES</span>
+                <span className="text-foreground ml-2">→ pick same syllable count</span>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">The current rule is always shown at the top. Rules change every 3 answers.</p>
+            <p className="text-sm text-muted-foreground">Rules change every 3 answers. The entire screen changes color so you always know which rule is active.</p>
             <p className="text-base font-bold text-foreground">Speed and accuracy both matter.</p>
           </div>
           {state.skipPractice ? (
@@ -170,7 +202,7 @@ export default function CategorySwitchComponent() {
           <div className="space-y-4">
             <p className="text-lg text-foreground">The real test is about to begin.</p>
             <p className="text-display text-4xl text-primary">60 seconds.</p>
-            <p className="text-base text-muted-foreground">Same rules — match words by the rule shown at the top. No feedback during the real test.</p>
+            <p className="text-base text-muted-foreground">Same rules — match words by the rule shown. Watch for color changes!</p>
           </div>
           <div className="card-sunken p-4 space-y-2">
             <p className="text-base text-foreground font-medium">Rules change every 3 answers.</p>
@@ -199,21 +231,29 @@ export default function CategorySwitchComponent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background select-none">
-      <div className="px-6 py-3 flex items-center justify-between border-b">
+    <motion.div
+      key={currentRule}
+      initial={{ opacity: 0.7 }}
+      animate={{ opacity: 1 }}
+      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
+    >
+      {/* Big rule banner */}
+      <div className={`${colors.bannerBg} px-6 py-4 text-center`}>
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-white text-2xl font-black tracking-wider">{RULE_LABELS[currentRule]}</span>
+        </div>
+        <p className="text-white/80 text-sm font-medium">{RULE_DESCRIPTIONS[currentRule]}</p>
+      </div>
+
+      <div className={`px-6 py-2 flex items-center justify-between border-b ${colors.border}`}>
         <div>
           {phase === 'practice' && <span className="text-xs font-bold text-amber-500 uppercase">Practice</span>}
-          <div>
-            <span className="text-sm text-muted-foreground">Rule: </span>
-            <span className="text-display text-lg text-primary">{RULE_LABELS[currentRule]}</span>
-          </div>
-          <p className="text-xs text-muted-foreground">{RULE_DESCRIPTIONS[currentRule]}</p>
+          <p className="text-xs text-muted-foreground">Trial {trialIndex + 1} • {3 - trialInBlock} left on this rule</p>
         </div>
         <div className="text-right">
           <span className="text-sm font-mono text-muted-foreground">
             {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
           </span>
-          <p className="text-xs text-muted-foreground">Trial {trialIndex + 1}</p>
         </div>
       </div>
 
@@ -243,12 +283,12 @@ export default function CategorySwitchComponent() {
           <button
             key={option}
             onClick={() => handleOptionTap(option)}
-            className="flex-1 min-h-[80px] rounded-xl border-2 border-border bg-muted/30 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target"
+            className={`flex-1 min-h-[80px] rounded-xl border-2 ${colors.border} bg-background/80 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target`}
           >
             <span className="text-display text-base text-foreground">{option}</span>
           </button>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
