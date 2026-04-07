@@ -3,12 +3,62 @@ import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant } from '@/lib/storage';
-import { ParticipantRecord } from '@/lib/types';
-import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  ParticipantRecord, ParticipantDemographics,
+  AgeBand, Gender, EducationLevel, OccupationType, SeniorityLevel, DemandProfile,
+} from '@/lib/types';
+import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type SubScreen = 'choice' | 'new' | 'returning' | 'found' | 'not-found';
+type SubScreen = 'choice' | 'demographics' | 'new' | 'returning' | 'found' | 'not-found';
+
+const AGE_BANDS: { value: AgeBand; label: string }[] = [
+  { value: '18-24', label: '18–24' },
+  { value: '25-29', label: '25–29' },
+  { value: '30-34', label: '30–34' },
+  { value: '35-44', label: '35–44' },
+  { value: '45-54', label: '45–54' },
+];
+
+const GENDERS: { value: Gender; label: string }[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'non-binary', label: 'Non-binary' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+];
+
+const EDUCATION_LEVELS: { value: EducationLevel; label: string }[] = [
+  { value: 'high-school', label: 'High School' },
+  { value: 'some-college', label: 'Some College' },
+  { value: 'bachelors', label: "Bachelor's Degree" },
+  { value: 'masters', label: "Master's Degree" },
+  { value: 'doctorate', label: 'Doctorate' },
+  { value: 'other', label: 'Other' },
+];
+
+const OCCUPATION_TYPES: { value: OccupationType; label: string }[] = [
+  { value: 'knowledge-worker', label: 'Knowledge Worker' },
+  { value: 'creative', label: 'Creative' },
+  { value: 'student', label: 'Student' },
+  { value: 'blue-collar', label: 'Blue Collar' },
+  { value: 'unemployed', label: 'Unemployed' },
+];
+
+const SENIORITY_LEVELS: { value: SeniorityLevel; label: string }[] = [
+  { value: 'entry', label: 'Entry Level' },
+  { value: 'mid', label: 'Mid Level' },
+  { value: 'senior', label: 'Senior' },
+  { value: 'executive', label: 'Executive' },
+  { value: 'not-applicable', label: 'Not Applicable' },
+];
+
+function deriveDemandProfile(occupation: OccupationType, seniority: SeniorityLevel): DemandProfile {
+  if (occupation === 'knowledge-worker' && (seniority === 'senior' || seniority === 'executive')) return 'HIGH';
+  if (occupation === 'knowledge-worker' || occupation === 'creative') return 'MODERATE';
+  return 'LOWER';
+}
 
 export default function SessionSetup() {
   const { facilitator, location, isPractice, setParticipant } = useSession();
@@ -19,6 +69,48 @@ export default function SessionSetup() {
   const [numInput, setNumInput] = useState('');
   const [foundParticipant, setFoundParticipant] = useState<ParticipantRecord | null>(null);
   const [searchedId, setSearchedId] = useState('');
+
+  // Demographics form state
+  const [dName, setDName] = useState('');
+  const [dAge, setDAge] = useState<AgeBand | ''>('');
+  const [dGender, setDGender] = useState<Gender | ''>('');
+  const [dEducation, setDEducation] = useState<EducationLevel | ''>('');
+  const [dOccupation, setDOccupation] = useState<OccupationType | ''>('');
+  const [dSeniority, setDSeniority] = useState<SeniorityLevel | ''>('');
+
+  const demographicsValid = dName.trim().length >= 2 && dAge !== '' && dGender !== '' && dEducation !== '' && dOccupation !== '' && dSeniority !== '';
+
+  const handleCreateWithDemographics = () => {
+    if (!demographicsValid) return;
+
+    const demandProfile = deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel);
+    const demographics: ParticipantDemographics = {
+      name: dName.trim(),
+      age_band: dAge as AgeBand,
+      gender: dGender as Gender,
+      education_level: dEducation as EducationLevel,
+      occupation_type: dOccupation as OccupationType,
+      seniority_level: dSeniority as SeniorityLevel,
+      demand_profile: demandProfile,
+    };
+
+    const id = generateParticipantId();
+    setNewId(id);
+    const p: ParticipantRecord = {
+      participant_id: id,
+      created_at: new Date().toISOString(),
+      created_by_facilitator: facilitator?.id || '',
+      created_at_location: location,
+      demographics,
+      session_count: 0,
+      last_session_date: null,
+      last_recall_raw_score: null,
+      sessions: [],
+    };
+    saveParticipant(p);
+    setFoundParticipant(p);
+    setSub('new');
+  };
 
   const handleNewParticipant = () => {
     if (isPractice) {
@@ -37,21 +129,8 @@ export default function SessionSetup() {
       setSub('new');
       return;
     }
-    const id = generateParticipantId();
-    setNewId(id);
-    const p: ParticipantRecord = {
-      participant_id: id,
-      created_at: new Date().toISOString(),
-      created_by_facilitator: facilitator?.id || '',
-      created_at_location: location,
-      session_count: 0,
-      last_session_date: null,
-      last_recall_raw_score: null,
-      sessions: [],
-    };
-    saveParticipant(p);
-    setFoundParticipant(p);
-    setSub('new');
+    // Go to demographics collection
+    setSub('demographics');
   };
 
   const handleLookup = () => {
@@ -102,6 +181,105 @@ export default function SessionSetup() {
           </motion.div>
         )}
 
+        {sub === 'demographics' && (
+          <motion.div key="demographics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md space-y-5">
+            <div>
+              <h2 className="text-display text-2xl text-foreground">New Participant</h2>
+              <p className="text-muted-foreground text-sm mt-1">Collect participant details before registration.</p>
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Full Name</label>
+              <Input
+                placeholder="Enter participant name"
+                value={dName}
+                onChange={e => setDName(e.target.value.slice(0, 100))}
+                className="h-12"
+              />
+            </div>
+
+            {/* Age Band */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Age Group</label>
+              <Select value={dAge} onValueChange={v => setDAge(v as AgeBand)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select age group" /></SelectTrigger>
+                <SelectContent>
+                  {AGE_BANDS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Gender</label>
+              <Select value={dGender} onValueChange={v => setDGender(v as Gender)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                <SelectContent>
+                  {GENDERS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Education */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Education Level</label>
+              <Select value={dEducation} onValueChange={v => setDEducation(v as EducationLevel)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select education level" /></SelectTrigger>
+                <SelectContent>
+                  {EDUCATION_LEVELS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Occupation Type */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Occupation Type</label>
+              <Select value={dOccupation} onValueChange={v => setDOccupation(v as OccupationType)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select occupation type" /></SelectTrigger>
+                <SelectContent>
+                  {OCCUPATION_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Seniority Level */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Seniority Level</label>
+              <Select value={dSeniority} onValueChange={v => setDSeniority(v as SeniorityLevel)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select seniority level" /></SelectTrigger>
+                <SelectContent>
+                  {SENIORITY_LEVELS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Derived demand profile preview */}
+            {dOccupation && dSeniority && (
+              <div className="card-sunken p-3 flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Demand Profile</span>
+                <span className="text-display text-sm text-primary">
+                  {deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel)}
+                </span>
+              </div>
+            )}
+
+            <Button
+              variant="hero"
+              size="xl"
+              className="w-full"
+              disabled={!demographicsValid}
+              onClick={handleCreateWithDemographics}
+            >
+              Register Participant
+            </Button>
+
+            <Button variant="ghost" onClick={() => setSub('choice')} className="w-full text-muted-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          </motion.div>
+        )}
+
         {sub === 'new' && (
           <motion.div key="new" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md space-y-6">
             <h2 className="text-display text-2xl text-foreground">New Participant</h2>
@@ -109,6 +287,16 @@ export default function SessionSetup() {
             <div className="card-elevated p-6 text-center">
               <span className="text-display text-3xl text-primary">{newId}</span>
             </div>
+
+            {foundParticipant?.demographics && (
+              <div className="card-sunken p-4 space-y-2">
+                <Row label="Name" value={foundParticipant.demographics.name} />
+                <Row label="Age" value={foundParticipant.demographics.age_band} />
+                <Row label="Occupation" value={formatOccupation(foundParticipant.demographics.occupation_type)} />
+                <Row label="Demand Profile" value={foundParticipant.demographics.demand_profile} />
+              </div>
+            )}
+
             <div className="card-sunken p-4 space-y-2">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
@@ -152,7 +340,9 @@ export default function SessionSetup() {
               <p className="text-sm text-muted-foreground mb-2">ID not found?</p>
               <Button variant="ghost" onClick={handleNewParticipant}>Register as new participant</Button>
             </div>
-            <Button variant="ghost" onClick={() => setSub('choice')} className="w-full text-muted-foreground">← Back</Button>
+            <Button variant="ghost" onClick={() => setSub('choice')} className="w-full text-muted-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
           </motion.div>
         )}
 
@@ -160,10 +350,17 @@ export default function SessionSetup() {
           <motion.div key="found" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md space-y-6">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-8 h-8 text-success" />
-              <h2 className="text-display text-2xl text-foreground">Participant Found</h2>
+              <h2 className="text-display text-2xl text-foreground">Welcome Back</h2>
             </div>
             <div className="card-elevated p-6 space-y-3">
               <Row label="ID" value={foundParticipant.participant_id} />
+              {foundParticipant.demographics && (
+                <>
+                  <Row label="Name" value={foundParticipant.demographics.name} />
+                  <Row label="Age" value={foundParticipant.demographics.age_band} />
+                  <Row label="Profile" value={foundParticipant.demographics.demand_profile} />
+                </>
+              )}
               <Row label="Sessions completed" value={String(foundParticipant.session_count)} />
               <Row label="Last session" value={foundParticipant.last_session_date || 'N/A'} />
               <Row label="Last Recall score" value={foundParticipant.last_recall_raw_score != null ? `${foundParticipant.last_recall_raw_score} / 20` : 'N/A'} />
@@ -174,7 +371,9 @@ export default function SessionSetup() {
             <Button variant="hero" size="xl" className="w-full" onClick={() => handleBeginTest('returning')}>
               Begin Session
             </Button>
-            <Button variant="ghost" onClick={() => setSub('returning')} className="w-full text-muted-foreground">← Back</Button>
+            <Button variant="ghost" onClick={() => setSub('returning')} className="w-full text-muted-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
           </motion.div>
         )}
 
@@ -203,6 +402,17 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-foreground">{value}</span>
     </div>
   );
+}
+
+function formatOccupation(type: string): string {
+  const map: Record<string, string> = {
+    'knowledge-worker': 'Knowledge Worker',
+    'creative': 'Creative',
+    'student': 'Student',
+    'blue-collar': 'Blue Collar',
+    'unemployed': 'Unemployed',
+  };
+  return map[type] || type;
 }
 
 function getFormDomain(form: string): string {
