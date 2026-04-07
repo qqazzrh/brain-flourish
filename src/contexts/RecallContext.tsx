@@ -1,34 +1,39 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { RecallSessionState, FormId, Facilitator, ParticipantRecord, ParticipantType } from '@/lib/types';
+
+interface RecallState {
+  currentScreen: number;
+  distractionValidCount: number;
+  distractionInvalidCount: number;
+  distractionTimerStart: string | null;
+  distractionTappedOptions: string[];
+  recalledUnits: Set<number>;
+  recallOrderTimestamps: Record<string, string>;
+  recallStartTime: string | null;
+  oneTimePromptUsed: boolean;
+  recallTimerUsed: boolean;
+  scoreEdited: boolean;
+}
 
 interface RecallContextType {
-  state: RecallSessionState;
-  setFacilitator: (f: Facilitator, location: string) => void;
-  setParticipant: (p: ParticipantRecord, type: ParticipantType, form: FormId) => void;
+  state: RecallState;
   goToScreen: (n: number) => void;
-  setPractice: (v: boolean) => void;
   setDistractionCounts: (valid: number, invalid: number) => void;
   setDistractionTimerStart: (t: string) => void;
+  addDistractionTappedOption: (option: string) => void;
   toggleUnit: (unitId: number) => void;
   setRecallStartTime: (t: string) => void;
   setOneTimePromptUsed: () => void;
   setRecallTimerUsed: (v: boolean) => void;
   setScoreEdited: () => void;
-  resetSession: () => void;
+  resetRecall: () => void;
 }
 
-const initialState: RecallSessionState = {
-  facilitator: null,
-  location: '',
-  participant: null,
-  participantType: 'new',
-  assignedForm: 'A',
+const initialState: RecallState = {
   currentScreen: 0,
-  sessionStartTime: null,
-  isPractice: false,
   distractionValidCount: 0,
   distractionInvalidCount: 0,
   distractionTimerStart: null,
+  distractionTappedOptions: [],
   recalledUnits: new Set(),
   recallOrderTimestamps: {},
   recallStartTime: null,
@@ -40,22 +45,10 @@ const initialState: RecallSessionState = {
 const RecallContext = createContext<RecallContextType | null>(null);
 
 export function RecallProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<RecallSessionState>({ ...initialState, recalledUnits: new Set() });
-
-  const setFacilitator = useCallback((f: Facilitator, location: string) => {
-    setState(s => ({ ...s, facilitator: f, location }));
-  }, []);
-
-  const setParticipant = useCallback((p: ParticipantRecord, type: ParticipantType, form: FormId) => {
-    setState(s => ({ ...s, participant: p, participantType: type, assignedForm: form, sessionStartTime: new Date().toISOString() }));
-  }, []);
+  const [state, setState] = useState<RecallState>({ ...initialState, recalledUnits: new Set() });
 
   const goToScreen = useCallback((n: number) => {
     setState(s => ({ ...s, currentScreen: n }));
-  }, []);
-
-  const setPractice = useCallback((v: boolean) => {
-    setState(s => ({ ...s, isPractice: v }));
   }, []);
 
   const setDistractionCounts = useCallback((valid: number, invalid: number) => {
@@ -64,6 +57,10 @@ export function RecallProvider({ children }: { children: React.ReactNode }) {
 
   const setDistractionTimerStart = useCallback((t: string) => {
     setState(s => ({ ...s, distractionTimerStart: t }));
+  }, []);
+
+  const addDistractionTappedOption = useCallback((option: string) => {
+    setState(s => ({ ...s, distractionTappedOptions: [...s.distractionTappedOptions, option] }));
   }, []);
 
   const toggleUnit = useCallback((unitId: number) => {
@@ -97,24 +94,17 @@ export function RecallProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, scoreEdited: true }));
   }, []);
 
-  const resetSession = useCallback(() => {
-    setState(s => ({
-      ...initialState,
-      recalledUnits: new Set(),
-      facilitator: s.facilitator,
-      location: s.location,
-    }));
+  const resetRecall = useCallback(() => {
+    setState({ ...initialState, recalledUnits: new Set() });
   }, []);
 
   const value = useMemo(() => ({
-    state, setFacilitator, setParticipant, goToScreen, setPractice,
-    setDistractionCounts, setDistractionTimerStart, toggleUnit,
-    setRecallStartTime, setOneTimePromptUsed, setRecallTimerUsed,
-    setScoreEdited, resetSession,
-  }), [state, setFacilitator, setParticipant, goToScreen, setPractice,
-    setDistractionCounts, setDistractionTimerStart, toggleUnit,
-    setRecallStartTime, setOneTimePromptUsed, setRecallTimerUsed,
-    setScoreEdited, resetSession]);
+    state, goToScreen, setDistractionCounts, setDistractionTimerStart,
+    addDistractionTappedOption, toggleUnit, setRecallStartTime,
+    setOneTimePromptUsed, setRecallTimerUsed, setScoreEdited, resetRecall,
+  }), [state, goToScreen, setDistractionCounts, setDistractionTimerStart,
+    addDistractionTappedOption, toggleUnit, setRecallStartTime,
+    setOneTimePromptUsed, setRecallTimerUsed, setScoreEdited, resetRecall]);
 
   return <RecallContext.Provider value={value}>{children}</RecallContext.Provider>;
 }
