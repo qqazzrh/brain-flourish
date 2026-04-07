@@ -3,6 +3,37 @@ import { ParticipantRecord, SessionRecord, FormId } from './types';
 const PARTICIPANTS_KEY = 'bfs_participants';
 const SESSIONS_KEY = 'bfs_sessions';
 const NEXT_ID_KEY = 'bfs_next_id';
+const PILLAR_SCORES_KEY = 'bfs_pillar_scores';
+
+export interface PillarScores {
+  participant_id: string;
+  recall_raw: number | null;
+  lockin_raw: number | null;
+  sharpness_raw: number | null;
+  recall_fluency: number | null;
+  lockin_degradation_index: number | null;
+  sharpness_simon_effect_ms: number | null;
+  sharpness_rt_switch_cost_ms: number | null;
+  updated_at: string;
+}
+
+export function getPillarScores(participantId: string): PillarScores | null {
+  const all = JSON.parse(localStorage.getItem(PILLAR_SCORES_KEY) || '{}');
+  return all[participantId] || null;
+}
+
+export function savePillarScore(participantId: string, updates: Partial<PillarScores>) {
+  const all = JSON.parse(localStorage.getItem(PILLAR_SCORES_KEY) || '{}');
+  const existing = all[participantId] || {
+    participant_id: participantId,
+    recall_raw: null, lockin_raw: null, sharpness_raw: null,
+    recall_fluency: null, lockin_degradation_index: null,
+    sharpness_simon_effect_ms: null, sharpness_rt_switch_cost_ms: null,
+    updated_at: '',
+  };
+  all[participantId] = { ...existing, ...updates, updated_at: new Date().toISOString() };
+  localStorage.setItem(PILLAR_SCORES_KEY, JSON.stringify(all));
+}
 
 export function getParticipants(): ParticipantRecord[] {
   const data = localStorage.getItem(PARTICIPANTS_KEY);
