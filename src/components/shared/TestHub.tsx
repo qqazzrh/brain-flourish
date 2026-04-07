@@ -28,6 +28,7 @@ export default function TestHub() {
       path: '/recall',
       module: 1,
       done: recallDone,
+      estimate: '~8 min',
     },
     {
       title: 'Lock-In Test',
@@ -36,6 +37,7 @@ export default function TestHub() {
       path: '/lock-in',
       module: 2,
       done: lockinDone,
+      estimate: '~7 min',
     },
     {
       title: 'Sharpness Test',
@@ -44,6 +46,7 @@ export default function TestHub() {
       path: '/sharpness',
       module: 3,
       done: sharpnessDone,
+      estimate: '~10 min',
     },
   ];
 
@@ -142,7 +145,7 @@ export default function TestHub() {
                           </span>
                         </div>
                         <h2 className="text-display text-xl text-foreground mt-1">{mod.title}</h2>
-                        <p className="text-sm text-muted-foreground">{mod.subtitle}</p>
+                        <p className="text-sm text-muted-foreground">{mod.subtitle} • <span className="text-foreground/70">{mod.estimate}</span></p>
                       </div>
                     </div>
                   </button>
