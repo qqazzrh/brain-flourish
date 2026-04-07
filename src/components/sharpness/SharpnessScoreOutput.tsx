@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeDualTaskScore, computeChoiceRTScore, computeCategorySwitchScore, computeSharpnessPillarScore } from '@/lib/sharpness-scoring';
-import { savePillarScore } from '@/lib/storage';
+import { savePillarScore, saveParticipant } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight } from 'lucide-react';
@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function SharpnessScoreOutput() {
   const { state, resetSharpness } = useSharpness();
-  const { participant, isPractice } = useSession();
+  const { participant, isPractice, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
 
@@ -27,6 +27,7 @@ export default function SharpnessScoreOutput() {
     const existing = JSON.parse(localStorage.getItem('bfs_sharpness_sessions') || '[]');
     existing.push({
       participant_id: participant?.participant_id,
+      session_number: currentSessionNumber,
       timestamp: new Date().toISOString(),
       practice: isPractice,
       dual_task: dualTask,
@@ -35,13 +36,19 @@ export default function SharpnessScoreOutput() {
       sharpness_pillar_score: pillarScore,
     });
     localStorage.setItem('bfs_sharpness_sessions', JSON.stringify(existing));
-    // Save pillar score for BFS scoring
     if (participant) {
-      savePillarScore(participant.participant_id, {
+      savePillarScore(participant.participant_id, currentSessionNumber, {
         sharpness_raw: pillarScore,
         sharpness_simon_effect_ms: choiceRT.simonEffect,
         sharpness_rt_switch_cost_ms: categorySwitch.rtSwitchCost,
       });
+      // Update participant metadata
+      const updatedP = { ...participant };
+      if (currentSessionNumber > updatedP.session_count) {
+        updatedP.session_count = currentSessionNumber;
+      }
+      updatedP.last_session_date = new Date().toISOString().split('T')[0];
+      saveParticipant(updatedP);
     }
     setSaved(true);
   };
@@ -56,11 +63,13 @@ export default function SharpnessScoreOutput() {
       <div className="flex-1 px-6 py-6 max-w-2xl mx-auto w-full space-y-5 overflow-y-auto">
         <div className="text-center space-y-1">
           <h1 className="text-display text-2xl text-foreground">SHARPNESS TEST COMPLETE</h1>
+          <p className="text-sm text-muted-foreground">Session {currentSessionNumber}</p>
           {isPractice && <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">Practice</span>}
         </div>
 
         <div className="card-elevated p-4 space-y-2">
           <InfoRow label="Participant" value={participant?.participant_id || ''} />
+          <InfoRow label="Session" value={`Session ${currentSessionNumber}`} />
           <InfoRow label="Test duration" value={`${Math.floor(testDuration / 60)} min ${testDuration % 60} sec`} />
         </div>
 
