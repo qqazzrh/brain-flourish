@@ -4,7 +4,7 @@ import { FACILITATORS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Brain } from 'lucide-react';
+import { Brain, Lock, Zap } from 'lucide-react';
 
 export default function FacilitatorLogin() {
   const { setFacilitator, setPractice } = useSession();
@@ -20,6 +20,12 @@ export default function FacilitatorLogin() {
 
   const isValid = selectedFac && location.trim().length > 0;
 
+  const tests = [
+    { icon: Brain, label: 'Recall', desc: 'Episodic Verbal Memory' },
+    { icon: Lock, label: 'Lock-In', desc: 'Sustained Attention' },
+    { icon: Zap, label: 'Sharpness', desc: 'Processing Speed & Flexibility' },
+  ];
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md space-y-8">
@@ -27,11 +33,23 @@ export default function FacilitatorLogin() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-2">
             <Brain className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-display text-3xl text-foreground">Reclaim Your Brain</h1>
-          <p className="text-muted-foreground text-lg">Facilitator Login</p>
+          <h1 className="text-display text-3xl text-foreground">Brain Fitness Score</h1>
+          <p className="text-muted-foreground text-lg">Reclaim Your Brain</p>
+        </div>
+
+        {/* Three test modules preview */}
+        <div className="flex justify-center gap-4">
+          {tests.map((t) => (
+            <div key={t.label} className="flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl bg-muted/50">
+              <t.icon className="w-5 h-5 text-primary" />
+              <span className="text-xs font-medium text-foreground">{t.label}</span>
+              <span className="text-[10px] text-muted-foreground text-center leading-tight">{t.desc}</span>
+            </div>
+          ))}
         </div>
 
         <div className="card-elevated p-6 space-y-5">
+          <p className="text-sm font-medium text-muted-foreground text-center">Facilitator Login</p>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Select your name</label>
             <Select value={selectedFac} onValueChange={setSelectedFac}>
@@ -81,6 +99,10 @@ export default function FacilitatorLogin() {
             Enter Practice Mode
           </Button>
         </div>
+
+        <footer className="text-center">
+          <p className="text-xs text-muted-foreground">Reclaim Your Brain | BFS v2.0 | 2026</p>
+        </footer>
       </div>
     </div>
   );
