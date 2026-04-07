@@ -125,12 +125,27 @@ export default function DistractionTimer() {
             )}
           </div>
 
-          {/* Tappable option grid */}
-          <div className="mb-4">
+          {/* Action buttons */}
+          <div className="flex gap-3 mb-4">
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 border-success text-success hover:bg-success/10"
+              onClick={() => {
+                const manualKey = `__MANUAL_VALID_${Date.now()}`;
+                setTappedOptions(prev => [...prev, manualKey]);
+                // Count manual valids by adding to a special list
+                setManualValidCount(prev => prev + 1);
+                setLastTapResult({ option: 'Valid (manual)', valid: true });
+                setTimeout(() => setLastTapResult(null), 800);
+              }}
+            >
+              <Check className="w-5 h-5 mr-2" /> Valid Answer
+            </Button>
             <Button
               variant="destructive"
               size="lg"
-              className="w-full"
+              className="flex-1"
               onClick={() => {
                 setTappedOptions(prev => [...prev, '__INVALID__']);
                 setLastTapResult({ option: 'Invalid', valid: false });
