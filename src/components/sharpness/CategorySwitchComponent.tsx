@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSharpness, CategorySwitchResponseEntry } from '@/contexts/SharpnessContext';
+import { useSharpness } from '@/contexts/SharpnessContext';
 import { getShuffledWordSet, WordTrial } from '@/lib/word-library';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -30,6 +30,17 @@ export default function CategorySwitchComponent() {
   const currentRule: Rule = RULES[ruleIndex % 3];
   const currentTrial: WordTrial | undefined = wordSet[trialIndex];
   const isSwitchTrial = trialInBlock === 0 && trialIndex > 0;
+
+  // Shuffle options - must be before any conditionals
+  const shuffledOptions = useMemo(() => {
+    if (!currentTrial) return [];
+    const opts = [...currentTrial.options];
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    return opts;
+  }, [currentTrial]);
 
   useEffect(() => {
     if (!started) return;
@@ -73,10 +84,8 @@ export default function CategorySwitchComponent() {
       correct: isCorrect,
     });
 
-    // Advance to next trial
     const nextTrialInBlock = trialInBlock + 1;
     if (nextTrialInBlock >= 3) {
-      // Switch rule
       setRuleIndex(prev => prev + 1);
       setTrialInBlock(0);
     } else {
@@ -112,26 +121,17 @@ export default function CategorySwitchComponent() {
   }
 
   if (!currentTrial) {
-    // Ran out of words
-    activeRef.current = false;
-    if (timerRef.current) clearInterval(timerRef.current);
-    goToScreen(10);
+    // Ran out of words - end the test
+    if (activeRef.current) {
+      activeRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
+      setTimeout(() => goToScreen(10), 0);
+    }
     return null;
   }
 
-  // Shuffle options for display
-  const shuffledOptions = useMemo(() => {
-    const opts = [...currentTrial.options];
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [opts[i], opts[j]] = [opts[j], opts[i]];
-    }
-    return opts;
-  }, [currentTrial]);
-
   return (
     <div className="min-h-screen flex flex-col bg-background select-none">
-      {/* Header */}
       <div className="px-6 py-3 flex items-center justify-between border-b">
         <div>
           <span className="text-sm text-muted-foreground">Rule: </span>
@@ -146,7 +146,6 @@ export default function CategorySwitchComponent() {
         </div>
       </div>
 
-      {/* Stimulus word */}
       <div className="flex-1 flex items-center justify-center">
         <motion.span
           key={trialIndex}
@@ -158,7 +157,6 @@ export default function CategorySwitchComponent() {
         </motion.span>
       </div>
 
-      {/* Response options */}
       <div className="px-6 pb-8 flex gap-3">
         {shuffledOptions.map(option => (
           <button

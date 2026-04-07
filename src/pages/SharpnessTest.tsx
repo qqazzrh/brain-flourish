@@ -19,8 +19,8 @@ function SharpnessFlow() {
     // Choice RT: screens 7-8
     case 7: case 8:
       return <ChoiceRTComponent />;
-    // Category Switching: screens 9-10
-    case 9: case 10:
+    // Category Switching: screens 9
+    case 9:
       return <CategorySwitchComponent />;
     // Complete
     case 10: return <SharpnessTestComplete />;
