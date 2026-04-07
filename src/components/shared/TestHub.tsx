@@ -145,7 +145,7 @@ export default function TestHub() {
                           </span>
                         </div>
                         <h2 className="text-display text-xl text-foreground mt-1">{mod.title}</h2>
-                        <p className="text-sm text-muted-foreground">{mod.subtitle}</p>
+                        <p className="text-sm text-muted-foreground">{mod.subtitle} • <span className="text-foreground/70">{mod.estimate}</span></p>
                       </div>
                     </div>
                   </button>
