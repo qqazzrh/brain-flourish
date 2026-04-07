@@ -9,8 +9,9 @@ interface SessionContextType {
   assignedForm: FormId;
   isPractice: boolean;
   sessionStartTime: string | null;
+  currentSessionNumber: number;
   setFacilitator: (f: Facilitator, location: string) => void;
-  setParticipant: (p: ParticipantRecord, type: ParticipantType, form: FormId) => void;
+  setParticipant: (p: ParticipantRecord, type: ParticipantType, form: FormId, sessionNumber: number) => void;
   setPractice: (v: boolean) => void;
   clearParticipant: () => void;
   logout: () => void;
@@ -26,16 +27,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [assignedForm, setForm] = useState<FormId>('A');
   const [isPractice, setIsPractice] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
+  const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
 
   const setFacilitator = useCallback((f: Facilitator, loc: string) => {
     setFac(f);
     setLoc(loc);
   }, []);
 
-  const setParticipant = useCallback((p: ParticipantRecord, type: ParticipantType, form: FormId) => {
+  const setParticipant = useCallback((p: ParticipantRecord, type: ParticipantType, form: FormId, sessionNumber: number) => {
     setPart(p);
     setPartType(type);
     setForm(form);
+    setCurrentSessionNumber(sessionNumber);
     setSessionStartTime(new Date().toISOString());
   }, []);
 
@@ -48,6 +51,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setPartType('new');
     setForm('A');
     setSessionStartTime(null);
+    setCurrentSessionNumber(1);
   }, []);
 
   const logout = useCallback(() => {
@@ -58,14 +62,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setForm('A');
     setIsPractice(false);
     setSessionStartTime(null);
+    setCurrentSessionNumber(1);
   }, []);
 
   const value = useMemo(() => ({
     facilitator, location, participant, participantType, assignedForm,
-    isPractice, sessionStartTime,
+    isPractice, sessionStartTime, currentSessionNumber,
     setFacilitator, setParticipant, setPractice, clearParticipant, logout,
   }), [facilitator, location, participant, participantType, assignedForm,
-    isPractice, sessionStartTime,
+    isPractice, sessionStartTime, currentSessionNumber,
     setFacilitator, setParticipant, setPractice, clearParticipant, logout]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

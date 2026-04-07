@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLockIn } from '@/contexts/LockInContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeLockInScore, computeSegments } from '@/lib/stimulus-engine';
-import { savePillarScore } from '@/lib/storage';
+import { savePillarScore, saveParticipant } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight, Flag } from 'lucide-react';
@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function LockInScoreOutput() {
   const { state, resetLockIn } = useLockIn();
-  const { participant, isPractice } = useSession();
+  const { participant, isPractice, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
 
@@ -30,10 +30,10 @@ export default function LockInScoreOutput() {
     : 0;
 
   const handleSave = () => {
-    // Save to localStorage (similar to recall)
     const existing = JSON.parse(localStorage.getItem('bfs_lockin_sessions') || '[]');
     existing.push({
       participant_id: participant?.participant_id,
+      session_number: currentSessionNumber,
       timestamp: new Date().toISOString(),
       practice: isPractice,
       sequence_seed: state.sequenceSeed,
@@ -45,12 +45,18 @@ export default function LockInScoreOutput() {
       response_log: state.responseLog,
     });
     localStorage.setItem('bfs_lockin_sessions', JSON.stringify(existing));
-    // Save pillar score for BFS scoring
     if (participant) {
-      savePillarScore(participant.participant_id, {
+      savePillarScore(participant.participant_id, currentSessionNumber, {
         lockin_raw: scores.pillarScore,
         lockin_degradation_index: degradationIndex,
       });
+      // Update participant metadata
+      const updatedP = { ...participant };
+      if (currentSessionNumber > updatedP.session_count) {
+        updatedP.session_count = currentSessionNumber;
+      }
+      updatedP.last_session_date = new Date().toISOString().split('T')[0];
+      saveParticipant(updatedP);
     }
     setSaved(true);
   };
@@ -65,11 +71,13 @@ export default function LockInScoreOutput() {
       <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-display text-2xl text-foreground">LOCK-IN TEST COMPLETE</h1>
+          <p className="text-sm text-muted-foreground">Session {currentSessionNumber}</p>
           {isPractice && <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">Practice</span>}
         </div>
 
         <div className="card-elevated p-5 space-y-2">
           <InfoRow label="Participant" value={participant?.participant_id || ''} />
+          <InfoRow label="Session" value={`Session ${currentSessionNumber}`} />
           <InfoRow label="Test duration" value={`${Math.floor(testDuration / 60)} min ${testDuration % 60} sec`} />
           <InfoRow label="Total stimuli" value={String(state.responseLog.length)} />
         </div>

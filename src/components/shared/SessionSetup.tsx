@@ -4,15 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant } from '@/lib/storage';
+import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant, getAllPillarScoresForParticipant, isSessionComplete, getPillarScores } from '@/lib/storage';
 import {
   ParticipantRecord, ParticipantDemographics,
   AgeBand, Gender, EducationLevel, OccupationType, SeniorityLevel, DemandProfile,
 } from '@/lib/types';
-import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
+import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Play, Plus, Brain, Lock, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type SubScreen = 'choice' | 'demographics' | 'new' | 'returning' | 'found' | 'not-found';
+type SubScreen = 'choice' | 'demographics' | 'new' | 'returning' | 'found' | 'not-found' | 'session-history';
 
 const AGE_BANDS: { value: AgeBand; label: string }[] = [
   { value: '18-24', label: '18–24' },
@@ -129,7 +129,6 @@ export default function SessionSetup() {
       setSub('new');
       return;
     }
-    // Go to demographics collection
     setSub('demographics');
   };
 
@@ -139,16 +138,15 @@ export default function SessionSetup() {
     const p = findParticipant(id);
     if (p) {
       setFoundParticipant(p);
-      setSub('found');
+      setSub('session-history');
     } else {
       setSub('not-found');
     }
   };
 
-  const handleBeginTest = (type: 'new' | 'returning') => {
-    if (!foundParticipant) return;
-    const form = getNextFormForParticipant(foundParticipant.participant_id);
-    setParticipant(foundParticipant, type, form);
+  const handleBeginSession = (p: ParticipantRecord, type: 'new' | 'returning', sessionNumber: number) => {
+    const form = getNextFormForParticipant(p.participant_id);
+    setParticipant(p, type, form, sessionNumber);
   };
 
   return (
@@ -188,73 +186,51 @@ export default function SessionSetup() {
               <p className="text-muted-foreground text-sm mt-1">Collect participant details before registration.</p>
             </div>
 
-            {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Full Name</label>
-              <Input
-                placeholder="Enter participant name"
-                value={dName}
-                onChange={e => setDName(e.target.value.slice(0, 100))}
-                className="h-12"
-              />
+              <Input placeholder="Enter participant name" value={dName} onChange={e => setDName(e.target.value.slice(0, 100))} className="h-12" />
             </div>
 
-            {/* Age Band */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Age Group</label>
               <Select value={dAge} onValueChange={v => setDAge(v as AgeBand)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Select age group" /></SelectTrigger>
-                <SelectContent>
-                  {AGE_BANDS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{AGE_BANDS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Gender */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Gender</label>
               <Select value={dGender} onValueChange={v => setDGender(v as Gender)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Select gender" /></SelectTrigger>
-                <SelectContent>
-                  {GENDERS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{GENDERS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Education */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Education Level</label>
               <Select value={dEducation} onValueChange={v => setDEducation(v as EducationLevel)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Select education level" /></SelectTrigger>
-                <SelectContent>
-                  {EDUCATION_LEVELS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{EDUCATION_LEVELS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Occupation Type */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Occupation Type</label>
               <Select value={dOccupation} onValueChange={v => setDOccupation(v as OccupationType)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Select occupation type" /></SelectTrigger>
-                <SelectContent>
-                  {OCCUPATION_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{OCCUPATION_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Seniority Level */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Seniority Level</label>
               <Select value={dSeniority} onValueChange={v => setDSeniority(v as SeniorityLevel)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Select seniority level" /></SelectTrigger>
-                <SelectContent>
-                  {SENIORITY_LEVELS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{SENIORITY_LEVELS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Derived demand profile preview */}
             {dOccupation && dSeniority && (
               <div className="card-sunken p-3 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Demand Profile</span>
@@ -264,13 +240,7 @@ export default function SessionSetup() {
               </div>
             )}
 
-            <Button
-              variant="hero"
-              size="xl"
-              className="w-full"
-              disabled={!demographicsValid}
-              onClick={handleCreateWithDemographics}
-            >
+            <Button variant="hero" size="xl" className="w-full" disabled={!demographicsValid} onClick={handleCreateWithDemographics}>
               Register Participant
             </Button>
 
@@ -316,8 +286,8 @@ export default function SessionSetup() {
                   Participant has recorded their ID
                 </label>
               </div>
-              <Button variant="hero" size="xl" className="w-full" disabled={!confirmed} onClick={() => handleBeginTest('new')}>
-                Begin Session
+              <Button variant="hero" size="xl" className="w-full" disabled={!confirmed} onClick={() => foundParticipant && handleBeginSession(foundParticipant, 'new', 1)}>
+                Begin Session 1
               </Button>
             </div>
           </motion.div>
@@ -346,6 +316,15 @@ export default function SessionSetup() {
           </motion.div>
         )}
 
+        {sub === 'session-history' && foundParticipant && (
+          <SessionHistoryScreen
+            participant={foundParticipant}
+            onContinue={(sessionNum) => handleBeginSession(foundParticipant, 'returning', sessionNum)}
+            onStartNew={(sessionNum) => handleBeginSession(foundParticipant, 'returning', sessionNum)}
+            onBack={() => setSub('returning')}
+          />
+        )}
+
         {sub === 'found' && foundParticipant && (
           <motion.div key="found" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md space-y-6">
             <div className="flex items-center gap-3">
@@ -363,13 +342,9 @@ export default function SessionSetup() {
               )}
               <Row label="Sessions completed" value={String(foundParticipant.session_count)} />
               <Row label="Last session" value={foundParticipant.last_session_date || 'N/A'} />
-              <Row label="Last Recall score" value={foundParticipant.last_recall_raw_score != null ? `${foundParticipant.last_recall_raw_score} / 20` : 'N/A'} />
             </div>
-            <div className="card-sunken p-4">
-              <Row label="Today's form" value={`${getNextFormForParticipant(foundParticipant.participant_id)} (${getFormDomain(getNextFormForParticipant(foundParticipant.participant_id))})`} />
-            </div>
-            <Button variant="hero" size="xl" className="w-full" onClick={() => handleBeginTest('returning')}>
-              Begin Session
+            <Button variant="hero" size="xl" className="w-full" onClick={() => handleBeginSession(foundParticipant, 'returning', foundParticipant.session_count + 1)}>
+              Begin Session {foundParticipant.session_count + 1}
             </Button>
             <Button variant="ghost" onClick={() => setSub('returning')} className="w-full text-muted-foreground">
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
@@ -395,6 +370,116 @@ export default function SessionSetup() {
   );
 }
 
+function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
+  participant: ParticipantRecord;
+  onContinue: (sessionNum: number) => void;
+  onStartNew: (sessionNum: number) => void;
+  onBack: () => void;
+}) {
+  const allScores = getAllPillarScoresForParticipant(participant.participant_id);
+  const totalSessions = Math.max(participant.session_count, allScores.length);
+
+  // Build session list
+  const sessions: { number: number; complete: boolean; recall: boolean; lockin: boolean; sharpness: boolean }[] = [];
+  for (let i = 1; i <= totalSessions; i++) {
+    const scores = getPillarScores(participant.participant_id, i);
+    const recall = scores?.recall_raw != null;
+    const lockin = scores?.lockin_raw != null;
+    const sharpness = scores?.sharpness_raw != null;
+    sessions.push({ number: i, complete: recall && lockin && sharpness, recall, lockin, sharpness });
+  }
+
+  // Find latest incomplete session
+  const latestIncomplete = sessions.find(s => !s.complete && (s.recall || s.lockin || s.sharpness));
+  const nextNewSession = totalSessions + 1;
+
+  return (
+    <motion.div key="session-history" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md space-y-6">
+      <div className="flex items-center gap-3">
+        <CheckCircle2 className="w-8 h-8 text-success" />
+        <h2 className="text-display text-2xl text-foreground">Welcome Back</h2>
+      </div>
+
+      <div className="card-elevated p-5 space-y-3">
+        <Row label="ID" value={participant.participant_id} />
+        {participant.demographics && (
+          <>
+            <Row label="Name" value={participant.demographics.name} />
+            <Row label="Age" value={participant.demographics.age_band} />
+            <Row label="Profile" value={participant.demographics.demand_profile} />
+          </>
+        )}
+        <Row label="Total sessions" value={String(totalSessions)} />
+        <Row label="Last session" value={participant.last_session_date || 'N/A'} />
+      </div>
+
+      {/* Session History */}
+      {sessions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-display text-sm text-foreground">SESSION HISTORY</h3>
+          {sessions.map(s => (
+            <div key={s.number} className={`card-elevated p-4 space-y-2 ${!s.complete && (s.recall || s.lockin || s.sharpness) ? 'border-warning/40' : ''}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-display text-base text-foreground">Session {s.number}</span>
+                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                  s.complete 
+                    ? 'bg-success/10 text-success' 
+                    : (s.recall || s.lockin || s.sharpness)
+                      ? 'bg-warning/10 text-warning'
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {s.complete ? 'Completed' : (s.recall || s.lockin || s.sharpness) ? 'Incomplete' : 'Not started'}
+                </span>
+              </div>
+              <div className="flex gap-3 text-xs">
+                <span className="flex items-center gap-1">
+                  <Brain className="w-3 h-3" />
+                  <span className={s.recall ? 'text-success' : 'text-muted-foreground'}>
+                    Recall {s.recall ? '✓' : '—'}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  <span className={s.lockin ? 'text-success' : 'text-muted-foreground'}>
+                    Lock-In {s.lockin ? '✓' : '—'}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  <span className={s.sharpness ? 'text-success' : 'text-muted-foreground'}>
+                    Sharpness {s.sharpness ? '✓' : '—'}
+                  </span>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="space-y-3">
+        {latestIncomplete && (
+          <Button variant="hero" size="xl" className="w-full gap-2" onClick={() => onContinue(latestIncomplete.number)}>
+            <Play className="w-5 h-5" /> Continue Session {latestIncomplete.number}
+          </Button>
+        )}
+        <Button
+          variant={latestIncomplete ? 'outline' : 'hero'}
+          size="xl"
+          className="w-full gap-2"
+          onClick={() => onStartNew(nextNewSession)}
+        >
+          <Plus className="w-5 h-5" /> Start New Session {nextNewSession}
+        </Button>
+      </div>
+
+      <Button variant="ghost" onClick={onBack} className="w-full text-muted-foreground">
+        <ArrowLeft className="w-4 h-4 mr-1" /> Back
+      </Button>
+    </motion.div>
+  );
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
@@ -413,9 +498,4 @@ function formatOccupation(type: string): string {
     'unemployed': 'Unemployed',
   };
   return map[type] || type;
-}
-
-function getFormDomain(form: string): string {
-  const map: Record<string, string> = { A: 'Logistics', B: 'Medicine', C: 'Engineering', D: 'Finance' };
-  return map[form] || '';
 }

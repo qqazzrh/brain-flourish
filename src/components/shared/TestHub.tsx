@@ -1,17 +1,24 @@
 import { useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { Brain, Lock, Zap, LogOut, BarChart3 } from 'lucide-react';
+import { Brain, Lock, Zap, LogOut, BarChart3, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import BFSScoring from '@/components/scoring/BFSScoring';
+import { getPillarScores } from '@/lib/storage';
 
 type Tab = 'tests' | 'scoring';
 
 export default function TestHub() {
-  const { participant, facilitator, location, isPractice, clearParticipant, logout, assignedForm } = useSession();
+  const { participant, facilitator, location, isPractice, clearParticipant, logout, assignedForm, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('tests');
+
+  // Check which tests are done for this session
+  const sessionScores = participant ? getPillarScores(participant.participant_id, currentSessionNumber) : null;
+  const recallDone = sessionScores?.recall_raw != null;
+  const lockinDone = sessionScores?.lockin_raw != null;
+  const sharpnessDone = sessionScores?.sharpness_raw != null;
 
   const modules = [
     {
@@ -20,7 +27,7 @@ export default function TestHub() {
       icon: Brain,
       path: '/recall',
       module: 1,
-      ready: true,
+      done: recallDone,
     },
     {
       title: 'Lock-In Test',
@@ -28,7 +35,7 @@ export default function TestHub() {
       icon: Lock,
       path: '/lock-in',
       module: 2,
-      ready: true,
+      done: lockinDone,
     },
     {
       title: 'Sharpness Test',
@@ -36,13 +43,12 @@ export default function TestHub() {
       icon: Zap,
       path: '/sharpness',
       module: 3,
-      ready: true,
+      done: sharpnessDone,
     },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="px-6 py-5 border-b">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
@@ -58,14 +64,13 @@ export default function TestHub() {
         </div>
       </header>
 
-      {/* Participant info */}
       <div className="px-6 py-4 bg-primary/5 border-b">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Participant</p>
             <p className="text-display text-lg text-foreground">{participant?.participant_id}</p>
             <p className="text-xs text-muted-foreground">
-              Form {assignedForm} • Session {(participant?.session_count || 0) + 1}
+              Form {assignedForm} • <span className="text-primary font-medium">Session {currentSessionNumber}</span>
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={clearParticipant}>
@@ -74,7 +79,6 @@ export default function TestHub() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="px-6 border-b">
         <div className="max-w-2xl mx-auto flex">
           <button
@@ -100,11 +104,10 @@ export default function TestHub() {
         </div>
       </div>
 
-      {/* Tab content */}
       <main className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
         {activeTab === 'tests' && (
           <>
-            <p className="text-sm text-muted-foreground mb-4">Select a test module to begin:</p>
+            <p className="text-sm text-muted-foreground mb-4">Session {currentSessionNumber} — Select a test module:</p>
             <div className="space-y-4">
               {modules.map((mod, i) => (
                 <motion.div
@@ -118,13 +121,25 @@ export default function TestHub() {
                     className="w-full text-left block card-elevated p-6 hover:border-primary/40 transition-all group"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <mod.icon className="w-6 h-6 text-primary" />
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        mod.done ? 'bg-success/10 group-hover:bg-success/20' : 'bg-primary/10 group-hover:bg-primary/20'
+                      }`}>
+                        {mod.done ? (
+                          <CheckCircle2 className="w-6 h-6 text-success" />
+                        ) : (
+                          <mod.icon className="w-6 h-6 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground font-medium">MODULE {mod.module}</span>
-                          <span className="px-2 py-0.5 bg-success/10 text-success text-xs rounded-full font-medium">Ready</span>
+                          <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                            mod.done 
+                              ? 'bg-success/10 text-success' 
+                              : 'bg-primary/10 text-primary'
+                          }`}>
+                            {mod.done ? 'Done' : 'Ready'}
+                          </span>
                         </div>
                         <h2 className="text-display text-xl text-foreground mt-1">{mod.title}</h2>
                         <p className="text-sm text-muted-foreground">{mod.subtitle}</p>
@@ -134,6 +149,16 @@ export default function TestHub() {
                 </motion.div>
               ))}
             </div>
+
+            {recallDone && lockinDone && sharpnessDone && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 text-center p-4 bg-success/10 text-success rounded-lg font-medium"
+              >
+                ✓ All tests complete for Session {currentSessionNumber} — go to Scoring tab to view results
+              </motion.div>
+            )}
           </>
         )}
 

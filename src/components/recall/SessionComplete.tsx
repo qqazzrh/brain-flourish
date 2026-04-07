@@ -14,7 +14,7 @@ const CAT_LABEL: Record<UnitCategory, string> = { WHO: 'Who', WHAT: 'What', WHER
 
 export default function SessionComplete() {
   const { state, goToScreen, setScoreEdited, resetRecall } = useRecall();
-  const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime } = useSession();
+  const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const passage = PASSAGE_FORMS[assignedForm];
@@ -48,7 +48,7 @@ export default function SessionComplete() {
       session_id: sessionId,
       participant_id: participant.participant_id,
       participant_type: participantType,
-      session_number: participant.session_count + 1,
+      session_number: currentSessionNumber,
       facilitator_id: facilitator?.id || '',
       location,
       timestamp_start: sessionStartTime || now,
@@ -79,16 +79,20 @@ export default function SessionComplete() {
       },
     };
     saveSession(session);
-    // Save pillar score for BFS scoring
-    savePillarScore(participant.participant_id, {
+    savePillarScore(participant.participant_id, currentSessionNumber, {
       recall_raw: pillarScore,
       recall_fluency: state.distractionValidCount,
     });
+    // Update participant metadata (don't increment session_count — that's set at session start)
     const updatedP = { ...participant };
-    updatedP.session_count += 1;
+    if (currentSessionNumber > updatedP.session_count) {
+      updatedP.session_count = currentSessionNumber;
+    }
     updatedP.last_session_date = now.split('T')[0];
     updatedP.last_recall_raw_score = rawScore;
-    updatedP.sessions = [...updatedP.sessions, sessionId];
+    if (!updatedP.sessions.includes(sessionId)) {
+      updatedP.sessions = [...updatedP.sessions, sessionId];
+    }
     saveParticipant(updatedP);
     setSaved(true);
   };
@@ -108,12 +112,13 @@ export default function SessionComplete() {
       <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-display text-2xl text-foreground">RECALL TEST COMPLETE</h1>
+          <p className="text-sm text-muted-foreground">Session {currentSessionNumber}</p>
           {isPractice && <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">Practice Session</span>}
         </div>
 
         <div className="card-elevated p-5 space-y-2">
           <InfoRow label="Participant" value={participant?.participant_id || ''} />
-          <InfoRow label="Session" value={`${(participant?.session_count || 0) + 1} of series`} />
+          <InfoRow label="Session" value={`Session ${currentSessionNumber}`} />
           <InfoRow label="Form used" value={`${assignedForm} (${FORM_DOMAINS[assignedForm]})`} />
           <InfoRow label="Session time" value={`${Math.floor(sessionDuration / 60)} min ${sessionDuration % 60} sec`} />
         </div>
