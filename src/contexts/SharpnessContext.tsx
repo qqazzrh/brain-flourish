@@ -35,6 +35,7 @@ export interface CategorySwitchResponseEntry {
 
 interface SharpnessState {
   currentScreen: number;
+  skipPractice: boolean;
   // Dual Task
   blockALog: DualTaskResponseEntry[];
   blockBLog: DualTaskResponseEntry[];
@@ -51,6 +52,7 @@ interface SharpnessState {
 interface SharpnessContextType {
   state: SharpnessState;
   goToScreen: (n: number) => void;
+  setSkipPractice: (v: boolean) => void;
   addBlockAResponse: (entry: DualTaskResponseEntry) => void;
   addBlockBResponse: (entry: DualTaskResponseEntry) => void;
   addBlockCResponse: (entry: DualTaskResponseEntry) => void;
@@ -63,6 +65,7 @@ interface SharpnessContextType {
 
 const initialState: SharpnessState = {
   currentScreen: 0,
+  skipPractice: false,
   blockALog: [],
   blockBLog: [],
   blockCLog: [],
@@ -78,6 +81,7 @@ export function SharpnessProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SharpnessState>({ ...initialState });
 
   const goToScreen = useCallback((n: number) => setState(s => ({ ...s, currentScreen: n })), []);
+  const setSkipPractice = useCallback((v: boolean) => setState(s => ({ ...s, skipPractice: v })), []);
 
   const addBlockAResponse = useCallback((entry: DualTaskResponseEntry) => {
     setState(s => ({ ...s, blockALog: [...s.blockALog, entry] }));
@@ -99,9 +103,9 @@ export function SharpnessProvider({ children }: { children: React.ReactNode }) {
   const resetSharpness = useCallback(() => setState({ ...initialState }), []);
 
   const value = useMemo(() => ({
-    state, goToScreen, addBlockAResponse, addBlockBResponse, addBlockCResponse,
+    state, goToScreen, setSkipPractice, addBlockAResponse, addBlockBResponse, addBlockCResponse,
     addChoiceRTResponse, addCategorySwitchResponse, setTestStartTime, setTestEndTime, resetSharpness,
-  }), [state, goToScreen, addBlockAResponse, addBlockBResponse, addBlockCResponse,
+  }), [state, goToScreen, setSkipPractice, addBlockAResponse, addBlockBResponse, addBlockCResponse,
     addChoiceRTResponse, addCategorySwitchResponse, setTestStartTime, setTestEndTime, resetSharpness]);
 
   return <SharpnessContext.Provider value={value}>{children}</SharpnessContext.Provider>;

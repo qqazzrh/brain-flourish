@@ -37,12 +37,16 @@ export default function LockInExplanation() {
         <div className="card-sunken p-4 space-y-2 text-center">
           <p className="text-base text-foreground">Tap for everything.</p>
           <p className="text-base text-foreground">Hold back only for <span className="font-bold">3</span> after <span className="font-bold">7</span>.</p>
-          <p className="text-sm text-muted-foreground mt-2">You'll practice first.</p>
         </div>
 
-        <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
-          I understand — Practice
-        </Button>
+        <div className="space-y-3">
+          <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
+            Practice First
+          </Button>
+          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={() => goToScreen(4)}>
+            Skip Practice — Start Real Test
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
