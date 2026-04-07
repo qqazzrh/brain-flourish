@@ -453,3 +453,28 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function formatOccupationLabel(type: string): string {
+  const map: Record<string, string> = {
+    'knowledge-worker': 'Knowledge Worker', 'creative': 'Creative',
+    'student': 'Student', 'blue-collar': 'Blue Collar', 'unemployed': 'Unemployed',
+  };
+  return map[type] || type;
+}
+
+function formatSeniorityLabel(level: string): string {
+  const map: Record<string, string> = {
+    'entry': 'Entry', 'mid': 'Mid', 'senior': 'Senior',
+    'executive': 'Executive', 'not-applicable': 'N/A',
+  };
+  return map[level] || level;
+}
+
+function formatEducationLabel(level: string): string {
+  const map: Record<string, string> = {
+    'high-school': 'High School', 'some-college': 'Some College',
+    'bachelors': "Bachelor's", 'masters': "Master's",
+    'doctorate': 'Doctorate', 'other': 'Other',
+  };
+  return map[level] || level;
+}
