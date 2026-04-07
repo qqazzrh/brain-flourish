@@ -4,6 +4,20 @@ export type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict';
 export type ParticipantType = 'new' | 'returning';
 export type AgeBand = '18-24' | '25-29' | '30-34' | '35-44' | '45-54';
 export type DemandProfile = 'HIGH' | 'MODERATE' | 'LOWER';
+export type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+export type EducationLevel = 'high-school' | 'some-college' | 'bachelors' | 'masters' | 'doctorate' | 'other';
+export type OccupationType = 'creative' | 'student' | 'unemployed' | 'blue-collar' | 'knowledge-worker';
+export type SeniorityLevel = 'entry' | 'mid' | 'senior' | 'executive' | 'not-applicable';
+
+export interface ParticipantDemographics {
+  name: string;
+  age_band: AgeBand;
+  gender: Gender;
+  education_level: EducationLevel;
+  occupation_type: OccupationType;
+  seniority_level: SeniorityLevel;
+  demand_profile: DemandProfile;
+}
 
 export interface ScoreableUnit {
   unit_id: number;
@@ -85,6 +99,7 @@ export interface ParticipantRecord {
   created_at: string;
   created_by_facilitator: string;
   created_at_location: string;
+  demographics?: ParticipantDemographics;
   session_count: number;
   last_session_date: string | null;
   last_recall_raw_score: number | null;
