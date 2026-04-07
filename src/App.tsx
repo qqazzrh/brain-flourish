@@ -7,6 +7,7 @@ import { SessionProvider } from "@/contexts/SessionContext";
 import Index from "./pages/Index.tsx";
 import RecallTest from "./pages/RecallTest.tsx";
 import LockInTest from "./pages/LockInTest.tsx";
+import SharpnessTest from "./pages/SharpnessTest.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,7 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/recall" element={<RecallTest />} />
             <Route path="/lock-in" element={<LockInTest />} />
-            <Route path="/sharpness" element={<NotFound />} />
+            <Route path="/sharpness" element={<SharpnessTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

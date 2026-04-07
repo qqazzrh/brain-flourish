@@ -30,11 +30,11 @@ export default function TestHub() {
     {
       title: 'Sharpness Test',
       subtitle: 'Processing Speed',
-      description: 'Coming soon — Module 3',
+      description: 'Processing speed & flexibility',
       icon: Zap,
       path: '/sharpness',
       module: 3,
-      ready: false,
+      ready: true,
     },
   ];
 
