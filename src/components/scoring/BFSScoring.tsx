@@ -122,6 +122,14 @@ export default function BFSScoring() {
             {/* Raw Pillar Scores */}
             <div className="card-elevated p-6 space-y-4">
               <p className="text-display text-sm text-primary">RAW PILLAR SCORES</p>
+              {hasAutoScores && (
+                <div className="bg-success/10 border border-success/20 rounded-lg px-4 py-2 text-xs text-success font-medium">
+                  ✓ Scores auto-populated from completed tests
+                  {pillarScores?.recall_raw != null && ' • Recall ✓'}
+                  {pillarScores?.lockin_raw != null && ' • Lock-In ✓'}
+                  {pillarScores?.sharpness_raw != null && ' • Sharpness ✓'}
+                </div>
+              )
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Recall</label>
