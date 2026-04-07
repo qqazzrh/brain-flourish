@@ -15,6 +15,7 @@ export default function DistractionTimer() {
   const [timeUp, setTimeUp] = useState(false);
   const [tappedOptions, setTappedOptions] = useState<string[]>([]);
   const [lastTapResult, setLastTapResult] = useState<{ option: string; valid: boolean } | null>(null);
+  const [manualValidCount, setManualValidCount] = useState(0);
   const chimeRef = useRef<boolean>(false);
 
   // Generate shuffled list of options to display
