@@ -202,7 +202,9 @@ export async function saveSession(session: any) {
   if (session.recall_done != null) row.recall_done = session.recall_done;
   if (session.recall_test != null) row.recall_test_data = session.recall_test;
   if (session.lockin_done != null) row.lockin_done = session.lockin_done;
+  if (session.lockin_test_data != null) row.lockin_test_data = session.lockin_test_data;
   if (session.sharpness_done != null) row.sharpness_done = session.sharpness_done;
+  if (session.sharpness_test_data != null) row.sharpness_test_data = session.sharpness_test_data;
 
   if (existing) {
     const { error } = await supabase.from('sessions').update(row).eq('session_id', session.session_id);

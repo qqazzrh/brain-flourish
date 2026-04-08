@@ -174,6 +174,7 @@ export type Database = {
           id: string
           location: string
           lockin_done: boolean
+          lockin_test_data: Json | null
           participant_id: string
           practice: boolean
           recall_done: boolean
@@ -182,6 +183,7 @@ export type Database = {
           session_id: string
           session_number: number
           sharpness_done: boolean
+          sharpness_test_data: Json | null
           timestamp_end: string | null
           timestamp_start: string
           updated_at: string
@@ -193,6 +195,7 @@ export type Database = {
           id?: string
           location?: string
           lockin_done?: boolean
+          lockin_test_data?: Json | null
           participant_id: string
           practice?: boolean
           recall_done?: boolean
@@ -201,6 +204,7 @@ export type Database = {
           session_id: string
           session_number?: number
           sharpness_done?: boolean
+          sharpness_test_data?: Json | null
           timestamp_end?: string | null
           timestamp_start?: string
           updated_at?: string
@@ -212,6 +216,7 @@ export type Database = {
           id?: string
           location?: string
           lockin_done?: boolean
+          lockin_test_data?: Json | null
           participant_id?: string
           practice?: boolean
           recall_done?: boolean
@@ -220,6 +225,7 @@ export type Database = {
           session_id?: string
           session_number?: number
           sharpness_done?: boolean
+          sharpness_test_data?: Json | null
           timestamp_end?: string | null
           timestamp_start?: string
           updated_at?: string
