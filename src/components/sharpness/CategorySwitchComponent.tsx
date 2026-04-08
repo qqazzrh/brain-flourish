@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
-import { WordTrial, WORD_LIBRARY } from '@/lib/word-library';
+import { WordTrial } from '@/lib/word-library';
 import { getWordTrials } from '@/lib/content-service';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
