@@ -216,6 +216,17 @@ export async function saveSession(session: any) {
   }
 }
 
+export async function getSessionByParticipant(participantId: string, sessionNumber: number): Promise<any | null> {
+  const { data } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('participant_id', participantId)
+    .eq('session_number', sessionNumber)
+    .eq('practice', false)
+    .maybeSingle();
+  return data || null;
+}
+
 export async function generateSessionId(): Promise<string> {
   const year = new Date().getFullYear();
   const { count } = await supabase.from('sessions').select('*', { count: 'exact', head: true });

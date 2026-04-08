@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
-import { getPillarScores, getAllPillarScoresForParticipant, PillarScores } from '@/lib/storage';
+import { getPillarScores, getAllPillarScoresForParticipant, PillarScores, getSessionByParticipant } from '@/lib/storage';
 import { AgeBand, DemandProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 type Screen = 'input' | 'participant_result' | 'facilitator_output' | 'saved';
@@ -35,6 +35,9 @@ export default function BFSScoring() {
   const [fluencyScore, setFluencyScore] = useState('');
   const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
 
+  // Session test data for raw breakdown
+  const [sessionData, setSessionData] = useState<any>(null);
+
   useEffect(() => {
     if (!participant) { setLoading(false); return; }
     const load = async () => {
@@ -50,13 +53,17 @@ export default function BFSScoring() {
         setSharpnessRaw(current.sharpness_raw != null ? String(current.sharpness_raw) : '');
         setFluencyScore(current.recall_fluency != null ? String(current.recall_fluency) : '');
       }
+      // Load session raw data
+      try {
+        const sess = await getSessionByParticipant(participant.participant_id, currentSessionNumber);
+        setSessionData(sess);
+      } catch {}
       setLoading(false);
     };
     load();
   }, [participant, currentSessionNumber]);
 
   const hasAutoScores = !!(pillarScores?.recall_raw != null || pillarScores?.lockin_raw != null || pillarScores?.sharpness_raw != null);
-
   const sessionNum = parseInt(selectedSession) || currentSessionNumber;
 
   const sessionOptions = (() => {
@@ -75,6 +82,10 @@ export default function BFSScoring() {
     setLockinRaw(scores?.lockin_raw != null ? String(scores.lockin_raw) : '');
     setSharpnessRaw(scores?.sharpness_raw != null ? String(scores.sharpness_raw) : '');
     setFluencyScore(scores?.recall_fluency != null ? String(scores.recall_fluency) : '');
+    try {
+      const sess = await getSessionByParticipant(participant?.participant_id || '', num);
+      setSessionData(sess);
+    } catch {}
     setScreen('input');
   };
 
@@ -85,30 +96,6 @@ export default function BFSScoring() {
   };
 
   const canCalculate = ageBand && demandProfile && recallRaw && lockinRaw && sharpnessRaw;
-
-  const handleExportCSV = () => {
-    if (!participant || allSessionScores.length === 0) return;
-    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'Fluency', 'Status'];
-    const rows = allSessionScores.map(s => {
-      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
-      return [
-        s.session_number,
-        s.recall_raw ?? '',
-        s.lockin_raw ?? '',
-        s.sharpness_raw ?? '',
-        s.recall_fluency ?? '',
-        complete ? 'Complete' : 'Partial',
-      ].join(',');
-    });
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${participant.participant_id}_scores.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   if (loading) {
     return <div className="text-center p-8 text-muted-foreground">Loading scores...</div>;
@@ -212,67 +199,40 @@ export default function BFSScoring() {
             </div>
 
             <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>Calculate BFS</Button>
-
-            {/* Score History Table */}
-            {allSessionScores.length > 0 && (
-              <div className="card-elevated p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-display text-sm text-primary">SCORE HISTORY</p>
-                  <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={handleExportCSV}>
-                    <Download className="w-3 h-3" /> Export CSV
-                  </Button>
-                </div>
-
-                {/* Per-test score history */}
-                <div className="space-y-4">
-                  <ScoreHistoryRow label="Recall" scores={allSessionScores} field="recall_raw" />
-                  <ScoreHistoryRow label="Lock-In" scores={allSessionScores} field="lockin_raw" />
-                  <ScoreHistoryRow label="Sharpness" scores={allSessionScores} field="sharpness_raw" />
-                </div>
-
-                {/* Summary table */}
-                <div className="overflow-x-auto border-t pt-4">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 text-muted-foreground font-medium">Session</th>
-                        <th className="text-center py-2 text-muted-foreground font-medium">Recall</th>
-                        <th className="text-center py-2 text-muted-foreground font-medium">Lock-In</th>
-                        <th className="text-center py-2 text-muted-foreground font-medium">Sharpness</th>
-                        <th className="text-center py-2 text-muted-foreground font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allSessionScores.map(s => {
-                        const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
-                        return (
-                          <tr key={s.session_number} className={`border-b last:border-0 ${s.session_number === sessionNum ? 'bg-primary/5' : ''}`}>
-                            <td className="py-2 text-foreground font-medium">S{s.session_number}</td>
-                            <td className="py-2 text-center">{s.recall_raw != null ? s.recall_raw : '—'}</td>
-                            <td className="py-2 text-center">{s.lockin_raw != null ? s.lockin_raw : '—'}</td>
-                            <td className="py-2 text-center">{s.sharpness_raw != null ? s.sharpness_raw : '—'}</td>
-                            <td className="py-2 text-center">
-                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${complete ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                                {complete ? '✓' : '…'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </motion.div>
         )}
 
         {screen === 'participant_result' && bfsResult && (
-          <ParticipantDisplay result={bfsResult} sessionNumber={sessionNum} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} participantId={participant?.participant_id || ''} allScores={allSessionScores} onContinue={() => setScreen('facilitator_output')} />
+          <ParticipantDisplay
+            result={bfsResult}
+            sessionNumber={sessionNum}
+            ageBand={ageBand as AgeBand}
+            demandProfile={demandProfile as DemandProfile}
+            participantId={participant?.participant_id || ''}
+            participantName={participant?.demographics?.name || ''}
+            allScores={allSessionScores}
+            sessionData={sessionData}
+            recallRaw={parseFloat(recallRaw) || 0}
+            lockinRaw={parseFloat(lockinRaw) || 0}
+            sharpnessRaw={parseFloat(sharpnessRaw) || 0}
+            onContinue={() => setScreen('facilitator_output')}
+          />
         )}
 
         {screen === 'facilitator_output' && bfsResult && (
-          <FacilitatorDisplay result={bfsResult} recallRaw={parseFloat(recallRaw)} lockinRaw={parseFloat(lockinRaw)} sharpnessRaw={parseFloat(sharpnessRaw)} fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined} participantId={participant?.participant_id || 'Unknown'} sessionNumber={sessionNum} allScores={allSessionScores} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} onSave={() => setScreen('saved')} />
+          <FacilitatorDisplay
+            result={bfsResult}
+            recallRaw={parseFloat(recallRaw)}
+            lockinRaw={parseFloat(lockinRaw)}
+            sharpnessRaw={parseFloat(sharpnessRaw)}
+            fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined}
+            participantId={participant?.participant_id || 'Unknown'}
+            sessionNumber={sessionNum}
+            allScores={allSessionScores}
+            ageBand={ageBand as AgeBand}
+            demandProfile={demandProfile as DemandProfile}
+            onSave={() => setScreen('saved')}
+          />
         )}
 
         {screen === 'saved' && bfsResult && (
@@ -283,49 +243,514 @@ export default function BFSScoring() {
   );
 }
 
-function ScoreHistoryRow({ label, scores, field }: { label: string; scores: PillarScores[]; field: 'recall_raw' | 'lockin_raw' | 'sharpness_raw' }) {
-  const values = scores.map(s => s[field]);
-  const validValues = values.filter((v): v is number => v != null);
-  const max = validValues.length > 0 ? Math.max(...validValues) : 100;
-  const latest = validValues.length > 0 ? validValues[validValues.length - 1] : null;
-  const prev = validValues.length > 1 ? validValues[validValues.length - 2] : null;
-  const trend = latest != null && prev != null ? latest - prev : null;
+/* ===== SCORE BAR CHART ===== */
+function ScoreBar({ label, score, target, color }: { label: string; score: number; target: number; color: string }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const scorePct = Math.min(score, 100);
+  const targetPct = Math.min(target, 100);
+  const isAbove = score >= target;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2">
+      <div className="flex justify-between items-baseline">
         <span className="text-display text-sm text-foreground">{label}</span>
         <div className="flex items-center gap-2">
-          {latest != null && <span className="text-display text-lg text-foreground">{latest}</span>}
-          {trend != null && (
-            <span className={`flex items-center text-xs font-medium ${trend > 0 ? 'text-success' : trend < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {trend > 0 ? <ArrowUp className="w-3 h-3" /> : trend < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-              {Math.abs(trend)}
-            </span>
-          )}
+          <span className={`text-display text-2xl ${isAbove ? 'text-success' : 'text-destructive'}`}>{score}</span>
+          <span className="text-sm text-muted-foreground">/ 100</span>
         </div>
       </div>
-      <div className="flex gap-1 items-end h-8">
-        {values.map((v, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-            {v != null ? (
-              <div className="w-full bg-primary/20 rounded-sm overflow-hidden" style={{ height: '100%' }}>
-                <div className="w-full bg-primary rounded-sm" style={{ height: `${Math.max((v / Math.max(max, 1)) * 100, 8)}%` }} />
-              </div>
-            ) : (
-              <div className="w-full h-full bg-muted/30 rounded-sm flex items-center justify-center">
-                <span className="text-[8px] text-muted-foreground">—</span>
-              </div>
-            )}
+      <div ref={barRef} className="h-8 bg-muted rounded-lg overflow-hidden relative">
+        {/* Score fill */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${scorePct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className={`h-full rounded-lg ${color}`}
+        />
+        {/* Remaining capacity (gray) */}
+        <div className="absolute top-0 right-0 h-full bg-muted" style={{ width: `${100 - scorePct}%` }} />
+        {/* Target line */}
+        <div
+          className="absolute top-0 h-full w-[3px] bg-success z-10"
+          style={{ left: `${targetPct}%` }}
+        >
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-success whitespace-nowrap">
+            {target}
           </div>
-        ))}
+        </div>
       </div>
-      <div className="flex gap-1">
-        {scores.map((s, i) => (
-          <span key={i} className="flex-1 text-center text-[9px] text-muted-foreground">S{s.session_number}</span>
-        ))}
+      {!isAbove && (
+        <p className="text-xs text-destructive font-medium">
+          {target - score} points below minimum threshold
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ===== PNG EXPORT ===== */
+async function exportScoreCardPNG(
+  result: BFSResult,
+  participantId: string,
+  participantName: string,
+  sessionNumber: number,
+) {
+  const canvas = document.createElement('canvas');
+  const w = 1200;
+  const h = 1400;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Background
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, w, h);
+
+  // Header gradient accent
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, '#0d9488');
+  grad.addColorStop(1, '#14b8a6');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, 6);
+
+  // Title
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 48px "Space Grotesk", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('BRAIN FITNESS SCORE', w / 2, 80);
+
+  ctx.font = '24px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Reclaim Your Brain', w / 2, 120);
+
+  // Participant info
+  ctx.font = '20px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#64748b';
+  const nameLabel = participantName ? `${participantName} (${participantId})` : participantId;
+  ctx.fillText(`${nameLabel}  •  Session ${sessionNumber}  •  ${new Date().toLocaleDateString()}`, w / 2, 165);
+
+  // Divider
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(80, 195);
+  ctx.lineTo(w - 80, 195);
+  ctx.stroke();
+
+  // Composite score - big center
+  const compositeY = 320;
+  const compositeColor = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
+  ctx.font = 'bold 160px "Space Grotesk", system-ui, sans-serif';
+  ctx.fillStyle = compositeColor;
+  ctx.textAlign = 'center';
+  ctx.fillText(String(result.bfsComposite), w / 2, compositeY);
+
+  ctx.font = '28px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText('BFS COMPOSITE  /  100', w / 2, compositeY + 40);
+
+  // Target & gap
+  ctx.font = '22px "IBM Plex Sans", system-ui, sans-serif';
+  const gapColor = result.bfsGap >= 0 ? '#10b981' : '#ef4444';
+  ctx.fillStyle = gapColor;
+  const gapText = result.bfsGap >= 0 ? `+${result.bfsGap} above minimum` : `${Math.abs(result.bfsGap)} below minimum`;
+  ctx.fillText(`Minimum: ${result.bfsTarget}  |  ${gapText}`, w / 2, compositeY + 80);
+
+  // Pillar bars
+  const barStartY = 460;
+  const barMargin = 80;
+  const barW = w - barMargin * 2;
+  const barH = 48;
+  const barGap = 100;
+
+  const pillars = [
+    { label: 'RECALL', score: result.recallBFS, color: '#3b82f6' },
+    { label: 'LOCK-IN', score: result.lockinBFS, color: '#8b5cf6' },
+    { label: 'SHARPNESS', score: result.sharpnessBFS, color: '#f59e0b' },
+  ];
+
+  pillars.forEach((p, i) => {
+    const y = barStartY + i * barGap;
+
+    // Label
+    ctx.font = 'bold 22px "Space Grotesk", system-ui, sans-serif';
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'left';
+    ctx.fillText(p.label, barMargin, y - 8);
+
+    // Score value
+    ctx.textAlign = 'right';
+    ctx.fillStyle = p.score >= 75 ? '#10b981' : '#ef4444';
+    ctx.font = 'bold 28px "Space Grotesk", system-ui, sans-serif';
+    ctx.fillText(String(p.score), w - barMargin, y - 8);
+
+    // Bar background
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(barMargin, y, barW, barH, 8);
+    ctx.fill();
+
+    // Score fill
+    const fillW = (p.score / 100) * barW;
+    const barColor = p.score >= 75 ? '#10b981' : '#ef4444';
+    ctx.fillStyle = barColor;
+    ctx.beginPath();
+    ctx.roundRect(barMargin, y, fillW, barH, 8);
+    ctx.fill();
+
+    // Threshold line at 75
+    const threshX = barMargin + (75 / 100) * barW;
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(threshX, y - 4);
+    ctx.lineTo(threshX, y + barH + 4);
+    ctx.stroke();
+
+    // Threshold label
+    ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = 'center';
+    ctx.fillText('MIN 75', threshX, y + barH + 18);
+  });
+
+  // Message
+  const msgY = barStartY + 3 * barGap + 40;
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.roundRect(barMargin, msgY, barW, 100, 12);
+  ctx.fill();
+
+  ctx.font = '20px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#e2e8f0';
+  ctx.textAlign = 'center';
+  const msg = getBFSMessage(result.bfsStatus);
+  // Word wrap
+  const words = msg.split(' ');
+  let line = '';
+  let lineY = msgY + 35;
+  const maxLineW = barW - 40;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxLineW && line) {
+      ctx.fillText(line.trim(), w / 2, lineY);
+      line = word + ' ';
+      lineY += 28;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line.trim(), w / 2, lineY);
+
+  // Status badge
+  const statusY = msgY + 130;
+  const statusLabel = result.bfsStatus === 'above_target' ? '🟢 ABOVE MINIMUM' : result.bfsStatus === 'at_target' ? '🟡 AT MINIMUM' : '🔴 BELOW MINIMUM';
+  ctx.font = 'bold 24px "Space Grotesk", system-ui, sans-serif';
+  ctx.fillStyle = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
+  ctx.fillText(statusLabel, w / 2, statusY);
+
+  // Footer
+  ctx.font = '16px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#475569';
+  ctx.fillText('Reclaim Your Brain  |  Brain Fitness Score v2.0  |  reclaimyourbrain.com', w / 2, h - 40);
+
+  // Download
+  const dataUrl = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `${participantId}_BFS_Session${sessionNumber}.png`;
+  a.click();
+}
+
+/* ===== RAW PERFORMANCE BREAKDOWN ===== */
+function RawBreakdown({ sessionData, recallRaw, lockinRaw, sharpnessRaw }: {
+  sessionData: any; recallRaw: number; lockinRaw: number; sharpnessRaw: number;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const recallData = sessionData?.recall_test_data;
+  const lockinData = sessionData?.lockin_test_data;
+  const sharpnessData = sessionData?.sharpness_test_data;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-display text-base text-foreground">RAW PERFORMANCE DATA</h3>
+      <p className="text-xs text-muted-foreground">Actual test performance — no algorithms or percentiles</p>
+
+      {/* RECALL */}
+      <div className="card-elevated overflow-hidden">
+        <button onClick={() => setExpanded(expanded === 'recall' ? null : 'recall')} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-info" />
+            <span className="text-display text-sm text-foreground">RECALL</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-display text-lg text-foreground">{recallRaw}</span>
+            {expanded === 'recall' ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+        {expanded === 'recall' && recallData && (
+          <div className="px-4 pb-4 space-y-2 border-t">
+            <div className="pt-3 space-y-1.5">
+              <InfoRow label="Units recalled" value={`${recallData.raw_score} / ${recallData.units_recalled?.length + recallData.units_missed?.length || 20}`} />
+              <InfoRow label="Units missed" value={String(recallData.units_missed?.length || 0)} />
+              <InfoRow label="Distraction valid answers" value={`${recallData.distraction_valid_count} in 90s`} />
+              <InfoRow label="Distraction repeats" value={String(recallData.distraction_invalid_count || 0)} />
+              <InfoRow label="Recall duration" value={`${recallData.recall_duration_seconds}s`} />
+              <InfoRow label="Prompt used" value={recallData.one_time_prompt_used ? 'Yes' : 'No'} />
+              {recallData.category_scores && (
+                <div className="border-t pt-2 mt-2 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Category Hits / Total:</p>
+                  {Object.entries(recallData.category_scores).map(([cat, cs]: [string, any]) => (
+                    <div key={cat} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground capitalize">{cat.replace('_', ' ')}</span>
+                      <span className="text-foreground font-medium">{cs.score} / {cs.max}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {expanded === 'recall' && !recallData && (
+          <div className="px-4 pb-4 border-t pt-3">
+            <p className="text-sm text-muted-foreground">No detailed data saved for this session.</p>
+          </div>
+        )}
+      </div>
+
+      {/* LOCK-IN */}
+      <div className="card-elevated overflow-hidden">
+        <button onClick={() => setExpanded(expanded === 'lockin' ? null : 'lockin')} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-[hsl(270,50%,55%)]" />
+            <span className="text-display text-sm text-foreground">LOCK-IN</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-display text-lg text-foreground">{lockinRaw}</span>
+            {expanded === 'lockin' ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+        {expanded === 'lockin' && lockinData && (
+          <div className="px-4 pb-4 space-y-2 border-t">
+            <div className="pt-3 space-y-1.5">
+              {lockinData.scores && (
+                <>
+                  <InfoRow label="Total stimuli" value={String(lockinData.scores.totalNonTargets + lockinData.scores.totalTargets)} />
+                  <InfoRow label="Hits (correct taps)" value={`${lockinData.scores.hits} / ${lockinData.scores.totalNonTargets}`} />
+                  <InfoRow label="Misses (no tap)" value={String(lockinData.scores.misses)} />
+                  <InfoRow label="False alarms (tapped on 7→3)" value={`${lockinData.scores.falseAlarms} / ${lockinData.scores.totalTargets}`} />
+                  <InfoRow label="Mean reaction time" value={`${lockinData.scores.meanRT}ms`} />
+                  <InfoRow label="RT consistency (std dev)" value={`${lockinData.scores.rtStdDev}ms`} />
+                </>
+              )}
+              {lockinData.segments && lockinData.segments.length >= 3 && (
+                <div className="border-t pt-2 mt-2 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Performance by 30-second stage:</p>
+                  {lockinData.segments.map((seg: any, i: number) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Stage {i + 1} ({seg.range_seconds?.[0] || i * 30}–{seg.range_seconds?.[1] || (i + 1) * 30}s)
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {(seg.accuracy * 100).toFixed(1)}% accuracy
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm border-t pt-1">
+                    <span className="text-muted-foreground">Degradation index</span>
+                    <span className={`font-medium ${lockinData.degradationIndex < 0 ? 'text-destructive' : 'text-success'}`}>
+                      {lockinData.degradationIndex > 0 ? '+' : ''}{lockinData.degradationIndex}%
+                    </span>
+                  </div>
+                </div>
+              )}
+              {lockinData.interruptionFlags?.length > 0 && (
+                <div className="border-t pt-2 mt-2">
+                  <InfoRow label="Interruptions flagged" value={String(lockinData.interruptionFlags.length)} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {expanded === 'lockin' && !lockinData && (
+          <div className="px-4 pb-4 border-t pt-3">
+            <p className="text-sm text-muted-foreground">No detailed data saved for this session.</p>
+          </div>
+        )}
+      </div>
+
+      {/* SHARPNESS */}
+      <div className="card-elevated overflow-hidden">
+        <button onClick={() => setExpanded(expanded === 'sharpness' ? null : 'sharpness')} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-warning" />
+            <span className="text-display text-sm text-foreground">SHARPNESS</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-display text-lg text-foreground">{sharpnessRaw}</span>
+            {expanded === 'sharpness' ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+        {expanded === 'sharpness' && sharpnessData && (
+          <div className="px-4 pb-4 space-y-3 border-t">
+            <div className="pt-3">
+              {/* Dual Task */}
+              {sharpnessData.dualTask && (
+                <div className="space-y-1.5 mb-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Dual Task</p>
+                  <InfoRow label="Visual baseline accuracy" value={`${(sharpnessData.dualTask.blockA.baselineAccuracy * 100).toFixed(1)}%`} />
+                  <InfoRow label="Visual baseline hits" value={`${sharpnessData.dualTask.blockA.correctTaps} / ${sharpnessData.dualTask.blockA.evenStimuli}`} />
+                  <InfoRow label="Auditory baseline accuracy" value={`${(sharpnessData.dualTask.blockB.baselineAccuracy * 100).toFixed(1)}%`} />
+                  <InfoRow label="Auditory baseline hits" value={`${sharpnessData.dualTask.blockB.correctTaps} / ${sharpnessData.dualTask.blockB.highTones}`} />
+                  <InfoRow label="Dual-task visual hits" value={`${sharpnessData.dualTask.blockC.visualCorrectTaps} / ${sharpnessData.dualTask.blockC.visualEvenStimuli}`} />
+                  <InfoRow label="Dual-task auditory hits" value={`${sharpnessData.dualTask.blockC.auditoryCorrectTaps} / ${sharpnessData.dualTask.blockC.auditoryHighTones}`} />
+                  <InfoRow label="Visual cost" value={`${(sharpnessData.dualTask.visualDualTaskCost * 100).toFixed(1)}%`} />
+                  <InfoRow label="Auditory cost" value={`${(sharpnessData.dualTask.auditoryDualTaskCost * 100).toFixed(1)}%`} />
+                </div>
+              )}
+
+              {/* Choice RT */}
+              {sharpnessData.choiceRT && (
+                <div className="space-y-1.5 mb-3 border-t pt-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Choice Reaction Time</p>
+                  <InfoRow label="Total trials" value={String(sharpnessData.choiceRT.totalTrials)} />
+                  <InfoRow label="Correct responses" value={`${sharpnessData.choiceRT.correctResponses} / ${sharpnessData.choiceRT.totalTrials}`} />
+                  <InfoRow label="Compatible mean RT" value={`${sharpnessData.choiceRT.compatibleMeanRT}ms`} />
+                  <InfoRow label="Incompatible mean RT" value={`${sharpnessData.choiceRT.incompatibleMeanRT}ms`} />
+                  <InfoRow label="Simon Effect (conflict cost)" value={`${sharpnessData.choiceRT.simonEffect}ms`} />
+                </div>
+              )}
+
+              {/* Category Switch */}
+              {sharpnessData.categorySwitch && (
+                <div className="space-y-1.5 border-t pt-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Category Switching</p>
+                  <InfoRow label="Total trials" value={String(sharpnessData.categorySwitch.totalTrials)} />
+                  <InfoRow label="Correct responses" value={`${sharpnessData.categorySwitch.correctResponses} / ${sharpnessData.categorySwitch.totalTrials}`} />
+                  <InfoRow label="Switch trial accuracy" value={`${sharpnessData.categorySwitch.switchCorrect} / ${sharpnessData.categorySwitch.switchTrials}`} />
+                  <InfoRow label="Stay trial accuracy" value={`${sharpnessData.categorySwitch.stayCorrect} / ${sharpnessData.categorySwitch.stayTrials}`} />
+                  <InfoRow label="Switch cost (RT)" value={`${sharpnessData.categorySwitch.rtSwitchCost}ms`} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {expanded === 'sharpness' && !sharpnessData && (
+          <div className="px-4 pb-4 border-t pt-3">
+            <p className="text-sm text-muted-foreground">No detailed data saved for this session.</p>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/* ===== PARTICIPANT RESULT DISPLAY ===== */
+function ParticipantDisplay({ result, sessionNumber, participantId, participantName, ageBand, demandProfile, allScores, sessionData, recallRaw, lockinRaw, sharpnessRaw, onContinue }: {
+  result: BFSResult; sessionNumber: number; participantId: string; participantName: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; sessionData: any; recallRaw: number; lockinRaw: number; sharpnessRaw: number; onContinue: () => void;
+}) {
+  const sessionBFS: { session: number; bfs: number }[] = allScores
+    .filter(s => s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null)
+    .map(s => {
+      const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+      return { session: s.session_number, bfs: r?.bfsComposite || 0 };
+    });
+
+  const lastBFS = sessionBFS.length >= 2 ? sessionBFS[sessionBFS.length - 2].bfs : null;
+  const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-1">Session {sessionNumber}</p>
+        <h2 className="text-display text-2xl text-foreground">YOUR BRAIN FITNESS SCORE</h2>
+      </div>
+
+      {/* Composite Score - Hero */}
+      <div className="card-elevated p-8 text-center space-y-3">
+        <motion.p
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className={`text-display text-7xl ${result.bfsComposite >= 75 ? 'text-success' : 'text-destructive'}`}
+        >
+          {result.bfsComposite}
+        </motion.p>
+        <p className="text-muted-foreground text-lg">out of 100</p>
+        <div className="flex justify-center gap-6 pt-2">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Minimum</p>
+            <p className="text-display text-lg text-success">{result.bfsTarget}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Gap</p>
+            <p className={`text-display text-lg ${result.bfsGap < 0 ? 'text-destructive' : 'text-success'}`}>
+              {result.bfsGap > 0 ? '+' : ''}{result.bfsGap}
+            </p>
+          </div>
+        </div>
+        {result.bfsComposite < 75 && (
+          <div className="bg-destructive/10 rounded-lg px-4 py-2 mt-3">
+            <p className="text-sm text-destructive font-medium">
+              {Math.abs(result.bfsGap)}-point gap — this is why you're here
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Pillar Bars - New Design */}
+      <div className="space-y-5">
+        <ScoreBar label="RECALL" score={result.recallBFS} target={75} color="bg-info" />
+        <ScoreBar label="LOCK-IN" score={result.lockinBFS} target={75} color="bg-[hsl(270,50%,55%)]" />
+        <ScoreBar label="SHARPNESS" score={result.sharpnessBFS} target={75} color="bg-warning" />
+      </div>
+
+      {/* Movement */}
+      {movement != null && (
+        <div className="card-elevated p-4 flex items-center justify-center gap-6">
+          <div className="text-center"><p className="text-xs text-muted-foreground">Previous</p><p className="text-display text-lg text-foreground">{lastBFS}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">Today</p><p className="text-display text-lg text-foreground">{result.bfsComposite}</p></div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Movement</p>
+            <div className="flex items-center justify-center gap-1">
+              {movement > 0 ? <ArrowUp className="w-4 h-4 text-success" /> : movement < 0 ? <ArrowDown className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
+              <p className={`text-display text-lg ${movement > 0 ? 'text-success' : movement < 0 ? 'text-destructive' : 'text-foreground'}`}>{movement > 0 ? '+' : ''}{movement}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message */}
+      <div className="card-sunken p-5 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
+        <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsStatus)}</p>
+      </div>
+
+      {/* Raw Breakdown */}
+      <RawBreakdown sessionData={sessionData} recallRaw={recallRaw} lockinRaw={lockinRaw} sharpnessRaw={sharpnessRaw} />
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          size="xl"
+          className="flex-1 gap-2"
+          onClick={() => exportScoreCardPNG(result, participantId, participantName, sessionNumber)}
+        >
+          <Image className="w-5 h-5" /> Share PNG
+        </Button>
+        <Button
+          variant="outline"
+          size="xl"
+          className="gap-2"
+          onClick={() => generateScorePDF(result, sessionNumber, participantId, allScores, ageBand, demandProfile)}
+        >
+          <FileDown className="w-5 h-5" /> PDF
+        </Button>
+        <Button variant="hero" size="xl" className="flex-1" onClick={onContinue}>Facilitator View</Button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -335,7 +760,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   const margin = 20;
   let y = 25;
 
-  // Title
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text('BRAIN FITNESS SCORE REPORT', w / 2, y, { align: 'center' });
@@ -345,12 +769,10 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.text(`Participant: ${participantId}  |  Session ${sessionNumber}  |  ${new Date().toLocaleDateString()}`, w / 2, y, { align: 'center' });
   y += 12;
 
-  // Divider
   doc.setDrawColor(200);
   doc.line(margin, y, w - margin, y);
   y += 10;
 
-  // Pillar scores
   const pillars = [
     { label: 'RECALL', score: result.recallBFS },
     { label: 'LOCK-IN', score: result.lockinBFS },
@@ -363,15 +785,18 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   y += 8;
 
   for (const p of pillars) {
-    // Bar background
     const barW = w - margin * 2 - 50;
     doc.setFillColor(230, 230, 230);
     doc.roundedRect(margin, y, barW, 8, 2, 2, 'F');
-    // Bar fill
     const fillW = Math.min(p.score / 100, 1) * barW;
-    doc.setFillColor(59, 130, 246);
+    const color = p.score >= 75 ? [16, 185, 129] : [239, 68, 68];
+    doc.setFillColor(color[0], color[1], color[2]);
     doc.roundedRect(margin, y, fillW, 8, 2, 2, 'F');
-    // Label & score
+    // Threshold line
+    const threshX = margin + (75 / 100) * barW;
+    doc.setDrawColor(34, 197, 94);
+    doc.setLineWidth(0.5);
+    doc.line(threshX, y - 1, threshX, y + 9);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30);
@@ -385,7 +810,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.line(margin, y, w - margin, y);
   y += 10;
 
-  // BFS Composite
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('BFS COMPOSITE', margin, y);
@@ -394,10 +818,9 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   y += 10;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Target: ${result.bfsTarget}  |  Gap: ${result.bfsGap > 0 ? '+' : ''}${result.bfsGap} points`, margin, y);
+  doc.text(`Minimum: ${result.bfsTarget}  |  Gap: ${result.bfsGap > 0 ? '+' : ''}${result.bfsGap} points`, margin, y);
   y += 12;
 
-  // Message
   doc.setDrawColor(200);
   doc.line(margin, y, w - margin, y);
   y += 8;
@@ -408,7 +831,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.text(msgLines, margin, y);
   y += msgLines.length * 5 + 10;
 
-  // Score history table
   if (allScores.length > 1) {
     doc.setDrawColor(200);
     doc.line(margin, y, w - margin, y);
@@ -418,7 +840,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
     doc.text('SCORE HISTORY', margin, y);
     y += 8;
 
-    // Table header
     const cols = [margin, margin + 30, margin + 60, margin + 90, margin + 120];
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
@@ -451,112 +872,9 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.save(`${participantId}_session${sessionNumber}_BFS_report.pdf`);
 }
 
-function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, demandProfile, allScores, onContinue }: {
-  result: BFSResult; sessionNumber: number; participantId: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; onContinue: () => void;
-}) {
-  // Compute BFS for all complete sessions
-  const sessionBFS: { session: number; bfs: number }[] = allScores
-    .filter(s => s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null)
-    .map(s => {
-      const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
-      return { session: s.session_number, bfs: r?.bfsComposite || 0 };
-    });
-
-  const lastBFS = sessionBFS.length >= 2 ? sessionBFS[sessionBFS.length - 2].bfs : null;
-  const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground mb-1">Session {sessionNumber}</p>
-        <h2 className="text-display text-2xl text-foreground">YOUR BRAIN FITNESS SCORE</h2>
-      </div>
-
-      <div className="space-y-5">
-        <PillarBar label="RECALL" score={result.recallBFS} target={75} />
-        <PillarBar label="LOCK-IN" score={result.lockinBFS} target={75} />
-        <PillarBar label="SHARPNESS" score={result.sharpnessBFS} target={75} />
-      </div>
-
-      <div className="card-elevated p-6 text-center space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">BFS</p>
-          <p className="text-display text-5xl text-foreground">{result.bfsComposite}<span className="text-2xl text-muted-foreground"> / 100</span></p>
-        </div>
-        <div className="flex justify-center gap-8">
-          <div><p className="text-xs text-muted-foreground">Target</p><p className="text-display text-lg text-primary">{result.bfsTarget}</p></div>
-          <div><p className="text-xs text-muted-foreground">Gap</p><p className={`text-display text-lg ${result.bfsGap < 0 ? 'text-destructive' : result.bfsGap > 0 ? 'text-success' : 'text-foreground'}`}>{result.bfsGap > 0 ? '+' : ''}{result.bfsGap} points</p></div>
-        </div>
-      </div>
-
-      {movement != null && (
-        <div className="card-elevated p-4 flex items-center justify-center gap-4">
-          <div className="text-center"><p className="text-xs text-muted-foreground">Previous BFS</p><p className="text-display text-lg text-foreground">{lastBFS}</p></div>
-          <div className="text-center"><p className="text-xs text-muted-foreground">Today's BFS</p><p className="text-display text-lg text-foreground">{result.bfsComposite}</p></div>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Movement</p>
-            <div className="flex items-center justify-center gap-1">
-              {movement > 0 ? <ArrowUp className="w-4 h-4 text-success" /> : movement < 0 ? <ArrowDown className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
-              <p className={`text-display text-lg ${movement > 0 ? 'text-success' : movement < 0 ? 'text-destructive' : 'text-foreground'}`}>{movement > 0 ? '+' : ''}{movement}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="card-sunken p-5 space-y-2">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">Message</p>
-        <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsStatus)}</p>
-      </div>
-
-      <div className="flex gap-3">
-        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={() => generateScorePDF(result, sessionNumber, participantId, allScores, ageBand, demandProfile)}>
-          <FileDown className="w-5 h-5" /> Download PDF
-        </Button>
-        <Button variant="hero" size="xl" className="flex-1" onClick={onContinue}>View Facilitator Output</Button>
-      </div>
-    </motion.div>
-  );
-}
-
-function PillarBar({ label, score, target }: { label: string; score: number; target: number }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between items-baseline">
-        <span className="text-display text-sm text-foreground">{label}</span>
-        <span className="text-display text-lg text-foreground">{score}</span>
-      </div>
-      <div className="h-3 bg-muted rounded-full overflow-hidden relative">
-        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(score, 100)}%` }} />
-        <div className="absolute top-0 h-full w-0.5 bg-foreground/40" style={{ left: `${target}%` }} />
-      </div>
-    </div>
-  );
-}
-
 function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, allScores, ageBand, demandProfile, onSave }: {
   result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; allScores: PillarScores[]; ageBand: AgeBand; demandProfile: DemandProfile; onSave: () => void;
 }) {
-  const handleExportCSV = () => {
-    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
-    const rows = allScores.map(s => {
-      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
-      let bfs = '';
-      if (complete) {
-        const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
-        bfs = String(r?.bfsComposite || '');
-      }
-      return [s.session_number, s.recall_raw ?? '', s.lockin_raw ?? '', s.sharpness_raw ?? '', bfs].join(',');
-    });
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${participantId}_session_${sessionNumber}_report.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
       <div className="text-center">
@@ -572,7 +890,7 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         {fluencyScore != null && <InfoRow label="Fluency" value={String(fluencyScore)} />}
         <div className="border-t pt-2">
           <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
-          <InfoRow label="Target" value={String(result.bfsTarget)} />
+          <InfoRow label="Minimum" value={String(result.bfsTarget)} />
           <InfoRow label="Gap" value={`${result.bfsGap > 0 ? '+' : ''}${result.bfsGap}`} />
         </div>
       </div>
@@ -583,7 +901,26 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
       </div>
 
       <div className="flex gap-3">
-        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={handleExportCSV}>
+        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={() => {
+          const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
+          const rows = allScores.map(s => {
+            const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+            let bfs = '';
+            if (complete) {
+              const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+              bfs = String(r?.bfsComposite || '');
+            }
+            return [s.session_number, s.recall_raw ?? '', s.lockin_raw ?? '', s.sharpness_raw ?? '', bfs].join(',');
+          });
+          const csv = [headers.join(','), ...rows].join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${participantId}_session_${sessionNumber}_report.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }}>
           <Download className="w-5 h-5" /> Export CSV
         </Button>
         <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={onSave}>
