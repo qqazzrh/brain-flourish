@@ -1162,64 +1162,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.save(`${participantId}_session${sessionNumber}_BFS_report.pdf`);
 }
 
-function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, allScores, ageBand, demandProfile, onSave }: {
-  result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; allScores: PillarScores[]; ageBand: AgeBand; demandProfile: DemandProfile; onSave: () => void;
-}) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-      <div className="text-center">
-        <p className="text-display text-sm text-primary">FACILITATOR OUTPUT</p>
-        <p className="text-sm text-muted-foreground">{participantId} • Session {sessionNumber}</p>
-      </div>
-
-      <div className="card-elevated p-6 space-y-4">
-        <h3 className="text-display text-base text-foreground">SESSION {sessionNumber} SCORES</h3>
-        <InfoRow label="Recall" value={`${recallRaw} / 100`} />
-        <InfoRow label="Lock-In" value={`${lockinRaw} / 100`} />
-        <InfoRow label="Sharpness" value={`${sharpnessRaw} / 100`} />
-        {fluencyScore != null && <InfoRow label="Fluency" value={String(fluencyScore)} />}
-        <div className="border-t pt-2">
-          <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
-          <InfoRow label="Minimum" value={String(result.bfsTarget)} />
-          <InfoRow label="Gap" value={`${result.bfsGap > 0 ? '+' : ''}${result.bfsGap}`} />
-        </div>
-      </div>
-
-      <div className="card-sunken p-5 space-y-2">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">Facilitator Script</p>
-        <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{getFacilitatorScript(result.bfsComposite, result.bfsGap)}</p>
-      </div>
-
-      <div className="flex gap-3">
-        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={() => {
-          const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
-          const rows = allScores.map(s => {
-            const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
-            let bfs = '';
-            if (complete) {
-              const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
-              bfs = String(r?.bfsComposite || '');
-            }
-            return [s.session_number, s.recall_raw ?? '', s.lockin_raw ?? '', s.sharpness_raw ?? '', bfs].join(',');
-          });
-          const csv = [headers.join(','), ...rows].join('\n');
-          const blob = new Blob([csv], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${participantId}_session_${sessionNumber}_report.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }}>
-          <Download className="w-5 h-5" /> Export CSV
-        </Button>
-        <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={onSave}>
-          <Save className="w-5 h-5" /> Save & Complete
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
 
 function SavedScreen({ result, participantId, sessionNumber, onNewSession }: {
   result: BFSResult; participantId: string; sessionNumber: number; onNewSession: () => void;
