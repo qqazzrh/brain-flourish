@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { FACILITATORS } from '@/lib/content-library';
+import { getFacilitators } from '@/lib/storage';
+import { Facilitator } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,14 @@ export default function FacilitatorLogin() {
   const { setFacilitator, setPractice } = useSession();
   const [selectedFac, setSelectedFac] = useState('');
   const [location, setLocation] = useState('');
+  const [facilitators, setFacilitators] = useState<Facilitator[]>([]);
+
+  useEffect(() => {
+    getFacilitators().then(setFacilitators);
+  }, []);
 
   const handleContinue = (practice: boolean) => {
-    const fac = FACILITATORS.find(f => f.id === selectedFac);
+    const fac = facilitators.find(f => f.id === selectedFac);
     if (!fac || !location.trim()) return;
     setFacilitator(fac, location.trim());
     setPractice(practice);
@@ -57,7 +63,7 @@ export default function FacilitatorLogin() {
                 <SelectValue placeholder="Choose facilitator..." />
               </SelectTrigger>
               <SelectContent>
-                {FACILITATORS.filter(f => f.id !== 'FAC-005').map(f => (
+                {facilitators.filter(f => f.id !== 'FAC-005').map(f => (
                   <SelectItem key={f.id} value={f.id} className="text-base">{f.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -90,7 +96,7 @@ export default function FacilitatorLogin() {
           <Button
             variant="ghost"
             onClick={() => {
-              const pracFac = FACILITATORS.find(f => f.id === 'FAC-005')!;
+              const pracFac = facilitators.find(f => f.id === 'FAC-005') || { id: 'FAC-005', name: 'Practice Facilitator' };
               setFacilitator(pracFac, 'Practice Session');
               setPractice(true);
             }}
