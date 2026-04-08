@@ -57,7 +57,7 @@ export default function SessionComplete() {
     try {
       const sessionId = await generateSessionId();
       const now = new Date().toISOString();
-      const session: SessionRecord = {
+      const session: any = {
         session_id: sessionId,
         participant_id: participant.participant_id,
         participant_type: participantType,
