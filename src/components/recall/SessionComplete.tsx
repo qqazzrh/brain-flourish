@@ -8,6 +8,7 @@ import { saveSession, generateSessionId, saveParticipant, savePillarScore } from
 import { motion } from 'framer-motion';
 import { Check, X, Edit3, Save, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
 
 const CATEGORY_ORDER: UnitCategory[] = ['WHO', 'WHAT', 'WHERE', 'WHEN', 'SPECIFIC'];
 const CAT_LABEL: Record<UnitCategory, string> = { WHO: 'Who', WHAT: 'What', WHERE: 'Where', WHEN: 'When', SPECIFIC: 'Specific' };
@@ -42,7 +43,16 @@ export default function SessionComplete() {
   const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
 
   const handleSave = async () => {
-    if (!participant || saving) return;
+    if (saving) return;
+    if (!participant) {
+      toast({
+        variant: 'destructive',
+        title: 'Unable to save session',
+        description: 'The participant session is missing. Please return to the test hub and reopen this participant.',
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -96,8 +106,17 @@ export default function SessionComplete() {
       updatedP.last_session_date = now.split('T')[0];
       await saveParticipant(updatedP);
       setSaved(true);
+      toast({
+        title: 'Session saved',
+        description: 'The Recall session was saved successfully.',
+      });
     } catch (err) {
       console.error('handleSave error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: 'The Recall session could not be saved. Please try again.',
+      });
     } finally {
       setSaving(false);
     }
