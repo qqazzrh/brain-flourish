@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      distraction_options: {
+        Row: {
+          category: string
+          created_at: string
+          expected_valid_range: Json
+          form_id: string
+          id: string
+          instruction: string
+          letter: string
+          valid_options: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          expected_valid_range?: Json
+          form_id: string
+          id?: string
+          instruction: string
+          letter?: string
+          valid_options: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          expected_valid_range?: Json
+          form_id?: string
+          id?: string
+          instruction?: string
+          letter?: string
+          valid_options?: Json
+        }
+        Relationships: []
+      }
       facilitators: {
         Row: {
           created_at: string
@@ -166,6 +199,42 @@ export type Database = {
           },
         ]
       }
+      recall_passages: {
+        Row: {
+          created_at: string
+          domain: string
+          emotional_valence_mean: number
+          fk_grade: number
+          form_id: string
+          id: string
+          passage_text: string
+          scoreable_units: Json
+          word_count: number
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          emotional_valence_mean?: number
+          fk_grade?: number
+          form_id: string
+          id?: string
+          passage_text: string
+          scoreable_units: Json
+          word_count?: number
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          emotional_valence_mean?: number
+          fk_grade?: number
+          form_id?: string
+          id?: string
+          passage_text?: string
+          scoreable_units?: Json
+          word_count?: number
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           created_at: string
@@ -239,6 +308,33 @@ export type Database = {
             referencedColumns: ["participant_id"]
           },
         ]
+      }
+      word_trials: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          options: Json
+          syllables: number
+          word: string
+        }
+        Insert: {
+          answers: Json
+          created_at?: string
+          id?: string
+          options: Json
+          syllables: number
+          word: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          options?: Json
+          syllables?: number
+          word?: string
+        }
+        Relationships: []
       }
     }
     Views: {
