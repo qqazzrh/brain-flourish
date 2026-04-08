@@ -197,9 +197,11 @@ export async function saveSession(session: any) {
   };
 
   if (existing) {
-    await supabase.from('sessions').update(row).eq('session_id', session.session_id);
+    const { error } = await supabase.from('sessions').update(row).eq('session_id', session.session_id);
+    if (error) console.error('saveSession update error:', error);
   } else {
-    await supabase.from('sessions').insert(row);
+    const { error } = await supabase.from('sessions').insert(row);
+    if (error) console.error('saveSession insert error:', error);
   }
 }
 
