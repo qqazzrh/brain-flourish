@@ -343,7 +343,7 @@ export default function ChoiceRTComponent() {
           <button
             key={zone}
             onClick={() => handleTapZone(zone)}
-            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongZone === zone ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
+            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${correctZoneFlash === zone ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : wrongZone === zone ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
             <span className="text-display text-xl text-foreground">{zone}</span>
           </button>
