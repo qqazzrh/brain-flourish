@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ParticipantRecord, FormId, Facilitator } from './types';
+import { getAvailableFormIds } from './content-service';
 
 // ====== Facilitators ======
 
@@ -224,9 +225,10 @@ export async function generateSessionId(): Promise<string> {
 
 export async function getNextFormForParticipant(participantId: string): Promise<FormId> {
   const sessions = await getParticipantSessions(participantId);
-  const forms: FormId[] = ['A', 'B', 'C', 'D'];
-  const idx = sessions.length % 4;
-  return forms[idx];
+  const forms = await getAvailableFormIds();
+  const totalForms = forms.length || 4;
+  const idx = sessions.length % totalForms;
+  return forms[idx] || 'A';
 }
 
 // ====== Helpers ======

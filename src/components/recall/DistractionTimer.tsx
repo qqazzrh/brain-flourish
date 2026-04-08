@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { DISTRACTION_OPTIONS, shuffleOptions } from '@/lib/distraction-options';
+import { shuffleOptions } from '@/lib/distraction-options';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, RotateCcw } from 'lucide-react';
+import { Check, X, RotateCcw, Loader2 } from 'lucide-react';
 
 export default function DistractionTimer() {
   const { state, goToScreen, setDistractionCounts } = useRecall();
-  const { assignedForm } = useSession();
-  const optionSet = DISTRACTION_OPTIONS[assignedForm];
+  const { distractionOptionSet, contentLoading } = useSession();
   
   const [seconds, setSeconds] = useState(90);
   const [timeUp, setTimeUp] = useState(false);
@@ -18,14 +17,16 @@ export default function DistractionTimer() {
   const [manualValidCount, setManualValidCount] = useState(0);
   const chimeRef = useRef<boolean>(false);
 
-  // Generate shuffled list of options to display
   const displayOptions = useMemo(() => {
-    return shuffleOptions([...optionSet.validOptions]);
-  }, [optionSet]);
+    if (!distractionOptionSet) return [];
+    return shuffleOptions([...distractionOptionSet.validOptions]);
+  }, [distractionOptionSet]);
+
+  const validOptions = distractionOptionSet?.validOptions || [];
 
   const listValidCount = tappedOptions.filter((opt, idx) => {
     if (opt.startsWith('__MANUAL_VALID_') || opt === '__INVALID__') return false;
-    return optionSet.validOptions.includes(opt) && tappedOptions.indexOf(opt) === idx;
+    return validOptions.includes(opt) && tappedOptions.indexOf(opt) === idx;
   }).length;
 
   const validCount = listValidCount + manualValidCount;
@@ -33,7 +34,7 @@ export default function DistractionTimer() {
   const invalidCount = tappedOptions.filter(opt =>
     !opt.startsWith('__MANUAL_VALID_') && (
       opt === '__INVALID__' ||
-      !optionSet.validOptions.includes(opt) ||
+      !validOptions.includes(opt) ||
       tappedOptions.indexOf(opt) !== tappedOptions.lastIndexOf(opt)
     )
   ).length;
@@ -81,6 +82,14 @@ export default function DistractionTimer() {
     goToScreen(5);
   }, [validCount, invalidCount, setDistractionCounts, goToScreen]);
 
+  if (contentLoading || !distractionOptionSet) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   const timerColor = seconds <= 0 ? 'text-destructive' : seconds <= 10 ? 'text-warning' : 'text-foreground';
@@ -91,7 +100,7 @@ export default function DistractionTimer() {
       <div className="px-6 py-4 border-b flex items-center justify-between">
         <div>
           <p className="text-display text-lg text-foreground">DISTRACTION TASK RUNNING</p>
-          <p className="text-muted-foreground">{optionSet.category}</p>
+          <p className="text-muted-foreground">{distractionOptionSet.category}</p>
         </div>
         <div className={`text-display text-4xl tabular-nums ${timerColor} transition-colors`}>
           {mins}:{String(secs).padStart(2, '0')}
@@ -141,7 +150,6 @@ export default function DistractionTimer() {
               onClick={() => {
                 const manualKey = `__MANUAL_VALID_${Date.now()}`;
                 setTappedOptions(prev => [...prev, manualKey]);
-                // Count manual valids by adding to a special list
                 setManualValidCount(prev => prev + 1);
                 setLastTapResult({ option: 'Valid (manual)', valid: true });
                 setTimeout(() => setLastTapResult(null), 800);
@@ -165,7 +173,7 @@ export default function DistractionTimer() {
 
           <div className="flex-1 overflow-y-auto">
             <p className="text-sm text-muted-foreground mb-3">
-              Tap each {optionSet.category.toLowerCase()} the participant names. Repeats are automatically marked invalid.
+              Tap each {distractionOptionSet.category.toLowerCase()} the participant names. Repeats are automatically marked invalid.
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {displayOptions.map((option) => {

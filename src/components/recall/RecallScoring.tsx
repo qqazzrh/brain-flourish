@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { PASSAGE_FORMS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, ScoreableUnit } from '@/lib/types';
 import { motion } from 'framer-motion';
-import { Check, Lock, Clock, MessageSquare } from 'lucide-react';
+import { Check, Lock, Clock, MessageSquare, Loader2 } from 'lucide-react';
 
 const CATEGORY_ORDER: UnitCategory[] = ['WHO', 'WHAT', 'WHERE', 'WHEN', 'SPECIFIC'];
 const CATEGORY_COLORS: Record<UnitCategory, string> = {
@@ -17,9 +16,8 @@ const CATEGORY_TEXT: Record<UnitCategory, string> = {
 
 export default function RecallScoring() {
   const { state, toggleUnit, goToScreen, setRecallStartTime, setOneTimePromptUsed, setRecallTimerUsed } = useRecall();
-  const { assignedForm } = useSession();
-  const passage = PASSAGE_FORMS[assignedForm];
-  const units = passage.scoreable_units;
+  const { passage, contentLoading } = useSession();
+  const units = passage?.scoreable_units || [];
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptDismissed, setPromptDismissed] = useState(state.oneTimePromptUsed);
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -59,6 +57,14 @@ export default function RecallScoring() {
 
   const handleDismissPrompt = () => { setPromptDismissed(true); setShowPrompt(false); setOneTimePromptUsed(); };
   const handleToggleTimer = () => { if (!timerEnabled) { setTimerEnabled(true); setRecallTimerUsed(true); } };
+
+  if (contentLoading || !passage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const grouped = CATEGORY_ORDER.map(cat => ({ category: cat, units: units.filter(u => u.category === cat) }));
   const totalRecalled = state.recalledUnits.size;
@@ -131,7 +137,7 @@ export default function RecallScoring() {
 
       <div className="sticky bottom-0 bg-background border-t px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <span className="text-display text-xl text-foreground">Score so far: <span className="text-primary">{totalRecalled}</span> / 20</span>
+          <span className="text-display text-xl text-foreground">Score so far: <span className="text-primary">{totalRecalled}</span> / {units.length}</span>
           <Button variant="hero" size="xl" onClick={() => goToScreen(6)}>Recall Complete</Button>
         </div>
       </div>

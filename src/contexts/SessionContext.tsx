@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-import { Facilitator, ParticipantRecord, ParticipantType, FormId } from '@/lib/types';
+import { Facilitator, ParticipantRecord, ParticipantType, FormId, PassageForm, DistractionTask } from '@/lib/types';
+import { DistractionOptionSet } from '@/lib/distraction-options';
+import { getPassageForForm, getDistractionTask, getDistractionOptions, getFormDomain } from '@/lib/content-service';
+import { PASSAGE_FORMS, DISTRACTION_TASKS, FORM_DOMAINS } from '@/lib/content-library';
+import { DISTRACTION_OPTIONS } from '@/lib/distraction-options';
 
 const SESSION_STORAGE_KEY = 'bfs-active-session';
 
@@ -33,6 +37,7 @@ function readStoredSession(): PersistedSessionState {
     if (!raw) return DEFAULT_SESSION_STATE;
 
     const parsed = JSON.parse(raw) as Partial<PersistedSessionState>;
+
     return {
       facilitator: parsed.facilitator ?? null,
       location: typeof parsed.location === 'string' ? parsed.location : '',
@@ -57,6 +62,12 @@ interface SessionContextType {
   isPractice: boolean;
   sessionStartTime: string | null;
   currentSessionNumber: number;
+  // Loaded content from DB
+  passage: PassageForm | null;
+  distractionTask: DistractionTask | null;
+  distractionOptionSet: DistractionOptionSet | null;
+  formDomain: string;
+  contentLoading: boolean;
   setFacilitator: (f: Facilitator, location: string) => void;
   setParticipant: (p: ParticipantRecord, type: ParticipantType, form: FormId, sessionNumber: number) => void;
   setPractice: (v: boolean) => void;
@@ -76,6 +87,49 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isPractice, setIsPractice] = useState(persisted.isPractice);
   const [sessionStartTime, setSessionStartTime] = useState<string | null>(persisted.sessionStartTime);
   const [currentSessionNumber, setCurrentSessionNumber] = useState(persisted.currentSessionNumber);
+
+  // Loaded content
+  const [passage, setPassage] = useState<PassageForm | null>(null);
+  const [distractionTask, setDistractionTask] = useState<DistractionTask | null>(null);
+  const [distractionOptionSet, setDistractionOptionSet] = useState<DistractionOptionSet | null>(null);
+  const [formDomain, setFormDomain] = useState<string>('');
+  const [contentLoading, setContentLoading] = useState(false);
+
+  // Load content when assignedForm changes
+  useEffect(() => {
+    let cancelled = false;
+    async function loadContent() {
+      setContentLoading(true);
+      try {
+        const [p, dt, dopts, domain] = await Promise.all([
+          getPassageForForm(assignedForm),
+          getDistractionTask(assignedForm),
+          getDistractionOptions(assignedForm),
+          getFormDomain(assignedForm),
+        ]);
+        if (!cancelled) {
+          setPassage(p);
+          setDistractionTask(dt);
+          setDistractionOptionSet(dopts);
+          setFormDomain(domain);
+        }
+      } catch (err) {
+        console.error('Failed to load content from DB, using fallback:', err);
+        if (!cancelled) {
+          // Fallback to hardcoded
+          const key = assignedForm as 'A' | 'B' | 'C' | 'D';
+          setPassage(PASSAGE_FORMS[key] || PASSAGE_FORMS.A);
+          setDistractionTask(DISTRACTION_TASKS[key] || DISTRACTION_TASKS.A);
+          setDistractionOptionSet(DISTRACTION_OPTIONS[key] || DISTRACTION_OPTIONS.A);
+          setFormDomain(FORM_DOMAINS[key] || 'Unknown');
+        }
+      } finally {
+        if (!cancelled) setContentLoading(false);
+      }
+    }
+    loadContent();
+    return () => { cancelled = true; };
+  }, [assignedForm]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -137,9 +191,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({
     facilitator, location, participant, participantType, assignedForm,
     isPractice, sessionStartTime, currentSessionNumber,
+    passage, distractionTask, distractionOptionSet, formDomain, contentLoading,
     setFacilitator, setParticipant, setPractice, clearParticipant, logout,
   }), [facilitator, location, participant, participantType, assignedForm,
     isPractice, sessionStartTime, currentSessionNumber,
+    passage, distractionTask, distractionOptionSet, formDomain, contentLoading,
     setFacilitator, setParticipant, setPractice, clearParticipant, logout]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

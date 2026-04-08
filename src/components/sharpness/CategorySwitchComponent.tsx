@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
-import { getShuffledWordSet, WordTrial } from '@/lib/word-library';
+import { WordTrial } from '@/lib/word-library';
+import { getWordTrials } from '@/lib/content-service';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
@@ -49,8 +50,30 @@ export default function CategorySwitchComponent() {
   const [feedback, setFeedback] = useState<{ correct: boolean; key: number } | null>(null);
   const [wrongOption, setWrongOption] = useState<string | null>(null);
 
-  const practiceWords = useMemo(() => getShuffledWordSet(10), []);
-  const realWords = useMemo(() => getShuffledWordSet(30), []);
+  const [practiceWords, setPracticeWords] = useState<WordTrial[]>([]);
+  const [realWords, setRealWords] = useState<WordTrial[]>([]);
+  const [wordsLoaded, setWordsLoaded] = useState(false);
+
+  // Load words from DB on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const [pw, rw] = await Promise.all([
+          getWordTrials(10),
+          getWordTrials(30),
+        ]);
+        setPracticeWords(pw);
+        setRealWords(rw);
+      } catch {
+        // Fallback to hardcoded
+        const { getShuffledWordSet } = await import('@/lib/word-library');
+        setPracticeWords(getShuffledWordSet(10));
+        setRealWords(getShuffledWordSet(30));
+      }
+      setWordsLoaded(true);
+    }
+    load();
+  }, []);
 
   const wordSet = phase === 'practice' ? practiceWords : realWords;
 

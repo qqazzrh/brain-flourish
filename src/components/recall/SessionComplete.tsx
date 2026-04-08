@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { PASSAGE_FORMS, FORM_DOMAINS, DISTRACTION_TASKS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
 import { saveSession, generateSessionId, saveParticipant, savePillarScore } from '@/lib/storage';
 import { motion } from 'framer-motion';
-import { Check, X, Edit3, Save, ArrowRight } from 'lucide-react';
+import { Check, X, Edit3, Save, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 
@@ -15,13 +14,13 @@ const CAT_LABEL: Record<UnitCategory, string> = { WHO: 'Who', WHAT: 'What', WHER
 
 export default function SessionComplete() {
   const { state, goToScreen, setScoreEdited, resetRecall } = useRecall();
-  const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime, currentSessionNumber } = useSession();
+  const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime, currentSessionNumber, passage, distractionTask, formDomain, contentLoading } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const passage = PASSAGE_FORMS[assignedForm];
-  const task = DISTRACTION_TASKS[assignedForm];
-  const units = passage.scoreable_units;
+
+  const units = passage?.scoreable_units || [];
+  const totalUnits = units.length;
 
   const categoryScores = useMemo(() => {
     const result: Record<string, CategoryScore> = {};
@@ -37,7 +36,7 @@ export default function SessionComplete() {
   }, [units, state.recalledUnits]);
 
   const rawScore = state.recalledUnits.size;
-  const pillarScore = Math.round((rawScore / 20) * 100);
+  const pillarScore = Math.round((rawScore / Math.max(totalUnits, 1)) * 100);
   const sessionDuration = sessionStartTime ? Math.round((Date.now() - new Date(sessionStartTime).getTime()) / 1000) : 0;
 
   const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
@@ -71,9 +70,9 @@ export default function SessionComplete() {
         practice: isPractice,
         recall_test: {
           form_id: assignedForm,
-          passage_domain: FORM_DOMAINS[assignedForm],
-          distraction_category: task.category,
-          distraction_letter: task.letter,
+          passage_domain: formDomain || 'Unknown',
+          distraction_category: distractionTask?.category || '',
+          distraction_letter: distractionTask?.letter || '',
           distraction_valid_count: state.distractionValidCount,
           distraction_invalid_count: state.distractionInvalidCount,
           distraction_duration_seconds: 90,
@@ -127,6 +126,14 @@ export default function SessionComplete() {
     navigate('/');
   };
 
+  if (contentLoading || !passage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
@@ -139,13 +146,13 @@ export default function SessionComplete() {
         <div className="card-elevated p-5 space-y-2">
           <InfoRow label="Participant" value={participant?.participant_id || ''} />
           <InfoRow label="Session" value={`Session ${currentSessionNumber}`} />
-          <InfoRow label="Form used" value={`${assignedForm} (${FORM_DOMAINS[assignedForm]})`} />
+          <InfoRow label="Form used" value={`${assignedForm} (${formDomain})`} />
           <InfoRow label="Session time" value={`${Math.floor(sessionDuration / 60)} min ${sessionDuration % 60} sec`} />
         </div>
 
         <div className="card-elevated p-8 text-center space-y-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">Raw Score</p>
-          <p className="text-display text-6xl text-primary">{rawScore}<span className="text-2xl text-muted-foreground"> / 20</span></p>
+          <p className="text-display text-6xl text-primary">{rawScore}<span className="text-2xl text-muted-foreground"> / {totalUnits}</span></p>
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground">Pillar Score</p>
             <p className="text-display text-3xl text-foreground">{pillarScore}<span className="text-lg text-muted-foreground"> / 100</span></p>
@@ -179,7 +186,7 @@ export default function SessionComplete() {
         <div className="card-sunken p-5 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
           <p className="text-lg text-foreground leading-relaxed">
-            "Your Recall score today is {rawScore} out of 20 — that's {pillarScore} out of 100."
+            "Your Recall score today is {rawScore} out of {totalUnits} — that's {pillarScore} out of 100."
           </p>
         </div>
 

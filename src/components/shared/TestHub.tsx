@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { Brain, Lock, Zap, LogOut, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Brain, Lock, Zap, LogOut, BarChart3, CheckCircle2, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -109,8 +109,11 @@ export default function TestHub() {
         {activeTab === 'scoring' && <BFSScoring />}
       </main>
 
-      <footer className="px-6 py-4 text-center">
+      <footer className="px-6 py-4 flex items-center justify-between">
         <p className="text-xs text-muted-foreground">Reclaim Your Brain | BFS v2.0 | 2026</p>
+        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => navigate('/admin/content')}>
+          <Database className="w-3 h-3" /> Content Admin
+        </Button>
       </footer>
     </div>
   );

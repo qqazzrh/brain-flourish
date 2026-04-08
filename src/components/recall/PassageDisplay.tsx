@@ -1,13 +1,20 @@
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { PASSAGE_FORMS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
 export default function PassageDisplay() {
   const { goToScreen } = useRecall();
-  const { assignedForm } = useSession();
-  const passage = PASSAGE_FORMS[assignedForm];
+  const { passage, contentLoading } = useSession();
+
+  if (contentLoading || !passage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
