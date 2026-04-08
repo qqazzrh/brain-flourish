@@ -34,7 +34,6 @@ export default function BFSScoring() {
   const [fluencyScore, setFluencyScore] = useState('');
   const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
 
-  // Load data
   useEffect(() => {
     if (!participant) { setLoading(false); return; }
     const load = async () => {
@@ -86,13 +85,29 @@ export default function BFSScoring() {
 
   const canCalculate = ageBand && demandProfile && recallRaw && lockinRaw && sharpnessRaw;
 
-  const getPreviousSessionBFS = useCallback(async (): Promise<number | null> => {
-    if (sessionNum <= 1) return null;
-    const prevScores = await getPillarScores(participant?.participant_id || '', sessionNum - 1);
-    if (!prevScores || prevScores.recall_raw == null || prevScores.lockin_raw == null || prevScores.sharpness_raw == null) return null;
-    const prevResult = computeBFS(prevScores.recall_raw, prevScores.lockin_raw, prevScores.sharpness_raw, demandProfile as DemandProfile, ageBand as AgeBand);
-    return prevResult?.bfsComposite || null;
-  }, [sessionNum, participant, demandProfile, ageBand]);
+  const handleExportCSV = () => {
+    if (!participant || allSessionScores.length === 0) return;
+    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'Fluency', 'Status'];
+    const rows = allSessionScores.map(s => {
+      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+      return [
+        s.session_number,
+        s.recall_raw ?? '',
+        s.lockin_raw ?? '',
+        s.sharpness_raw ?? '',
+        s.recall_fluency ?? '',
+        complete ? 'Complete' : 'Partial',
+      ].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${participant.participant_id}_scores.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return <div className="text-center p-8 text-muted-foreground">Loading scores...</div>;
@@ -195,22 +210,27 @@ export default function BFSScoring() {
               </div>
             </div>
 
-            <div className="card-elevated p-6 space-y-4">
-              <p className="text-display text-sm text-muted-foreground">SECONDARY SCORES (OPTIONAL)</p>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">Fluency Score</label>
-                  <Input type="number" value={fluencyScore} onChange={e => setFluencyScore(e.target.value)} placeholder="—" className="text-center h-10" />
-                </div>
-              </div>
-            </div>
-
             <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>Calculate BFS</Button>
 
+            {/* Score History Table */}
             {allSessionScores.length > 0 && (
               <div className="card-elevated p-6 space-y-4">
-                <p className="text-display text-sm text-primary">SESSION HISTORY</p>
-                <div className="overflow-x-auto">
+                <div className="flex items-center justify-between">
+                  <p className="text-display text-sm text-primary">SCORE HISTORY</p>
+                  <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={handleExportCSV}>
+                    <Download className="w-3 h-3" /> Export CSV
+                  </Button>
+                </div>
+
+                {/* Per-test score history */}
+                <div className="space-y-4">
+                  <ScoreHistoryRow label="Recall" scores={allSessionScores} field="recall_raw" />
+                  <ScoreHistoryRow label="Lock-In" scores={allSessionScores} field="lockin_raw" />
+                  <ScoreHistoryRow label="Sharpness" scores={allSessionScores} field="sharpness_raw" />
+                </div>
+
+                {/* Summary table */}
+                <div className="overflow-x-auto border-t pt-4">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
@@ -226,13 +246,13 @@ export default function BFSScoring() {
                         const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
                         return (
                           <tr key={s.session_number} className={`border-b last:border-0 ${s.session_number === sessionNum ? 'bg-primary/5' : ''}`}>
-                            <td className="py-2 text-foreground font-medium">Session {s.session_number}</td>
+                            <td className="py-2 text-foreground font-medium">S{s.session_number}</td>
                             <td className="py-2 text-center">{s.recall_raw != null ? s.recall_raw : '—'}</td>
                             <td className="py-2 text-center">{s.lockin_raw != null ? s.lockin_raw : '—'}</td>
                             <td className="py-2 text-center">{s.sharpness_raw != null ? s.sharpness_raw : '—'}</td>
                             <td className="py-2 text-center">
                               <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${complete ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                                {complete ? 'Complete' : 'Partial'}
+                                {complete ? '✓' : '…'}
                               </span>
                             </td>
                           </tr>
@@ -247,11 +267,11 @@ export default function BFSScoring() {
         )}
 
         {screen === 'participant_result' && bfsResult && (
-          <ParticipantDisplay result={bfsResult} sessionNumber={sessionNum} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} participantId={participant?.participant_id || ''} getPreviousBFS={getPreviousSessionBFS} onContinue={() => setScreen('facilitator_output')} />
+          <ParticipantDisplay result={bfsResult} sessionNumber={sessionNum} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} participantId={participant?.participant_id || ''} allScores={allSessionScores} onContinue={() => setScreen('facilitator_output')} />
         )}
 
         {screen === 'facilitator_output' && bfsResult && (
-          <FacilitatorDisplay result={bfsResult} recallRaw={parseFloat(recallRaw)} lockinRaw={parseFloat(lockinRaw)} sharpnessRaw={parseFloat(sharpnessRaw)} fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined} participantId={participant?.participant_id || 'Unknown'} sessionNumber={sessionNum} onSave={() => setScreen('saved')} />
+          <FacilitatorDisplay result={bfsResult} recallRaw={parseFloat(recallRaw)} lockinRaw={parseFloat(lockinRaw)} sharpnessRaw={parseFloat(sharpnessRaw)} fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined} participantId={participant?.participant_id || 'Unknown'} sessionNumber={sessionNum} allScores={allSessionScores} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} onSave={() => setScreen('saved')} />
         )}
 
         {screen === 'saved' && bfsResult && (
@@ -262,15 +282,64 @@ export default function BFSScoring() {
   );
 }
 
-function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, demandProfile, getPreviousBFS, onContinue }: {
-  result: BFSResult; sessionNumber: number; participantId: string; ageBand: AgeBand; demandProfile: DemandProfile; getPreviousBFS: () => Promise<number | null>; onContinue: () => void;
+function ScoreHistoryRow({ label, scores, field }: { label: string; scores: PillarScores[]; field: 'recall_raw' | 'lockin_raw' | 'sharpness_raw' }) {
+  const values = scores.map(s => s[field]);
+  const validValues = values.filter((v): v is number => v != null);
+  const max = validValues.length > 0 ? Math.max(...validValues) : 100;
+  const latest = validValues.length > 0 ? validValues[validValues.length - 1] : null;
+  const prev = validValues.length > 1 ? validValues[validValues.length - 2] : null;
+  const trend = latest != null && prev != null ? latest - prev : null;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-display text-sm text-foreground">{label}</span>
+        <div className="flex items-center gap-2">
+          {latest != null && <span className="text-display text-lg text-foreground">{latest}</span>}
+          {trend != null && (
+            <span className={`flex items-center text-xs font-medium ${trend > 0 ? 'text-success' : trend < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {trend > 0 ? <ArrowUp className="w-3 h-3" /> : trend < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+              {Math.abs(trend)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-1 items-end h-8">
+        {values.map((v, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+            {v != null ? (
+              <div className="w-full bg-primary/20 rounded-sm overflow-hidden" style={{ height: '100%' }}>
+                <div className="w-full bg-primary rounded-sm" style={{ height: `${Math.max((v / Math.max(max, 1)) * 100, 8)}%` }} />
+              </div>
+            ) : (
+              <div className="w-full h-full bg-muted/30 rounded-sm flex items-center justify-center">
+                <span className="text-[8px] text-muted-foreground">—</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        {scores.map((s, i) => (
+          <span key={i} className="flex-1 text-center text-[9px] text-muted-foreground">S{s.session_number}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, demandProfile, allScores, onContinue }: {
+  result: BFSResult; sessionNumber: number; participantId: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; onContinue: () => void;
 }) {
-  const [lastBFS, setLastBFS] = useState<number | null>(null);
+  // Compute BFS for all complete sessions
+  const sessionBFS: { session: number; bfs: number }[] = allScores
+    .filter(s => s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null)
+    .map(s => {
+      const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+      return { session: s.session_number, bfs: r?.bfsComposite || 0 };
+    });
 
-  useEffect(() => {
-    getPreviousBFS().then(setLastBFS);
-  }, [getPreviousBFS]);
-
+  const lastBFS = sessionBFS.length >= 2 ? sessionBFS[sessionBFS.length - 2].bfs : null;
   const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
 
   return (
@@ -336,9 +405,29 @@ function PillarBar({ label, score, target }: { label: string; score: number; tar
   );
 }
 
-function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, onSave }: {
-  result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; onSave: () => void;
+function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, allScores, ageBand, demandProfile, onSave }: {
+  result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; allScores: PillarScores[]; ageBand: AgeBand; demandProfile: DemandProfile; onSave: () => void;
 }) {
+  const handleExportCSV = () => {
+    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
+    const rows = allScores.map(s => {
+      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+      let bfs = '';
+      if (complete) {
+        const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+        bfs = String(r?.bfsComposite || '');
+      }
+      return [s.session_number, s.recall_raw ?? '', s.lockin_raw ?? '', s.sharpness_raw ?? '', bfs].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${participantId}_session_${sessionNumber}_report.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -348,10 +437,10 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
       </div>
 
       <div className="card-elevated p-6 space-y-4">
-        <h3 className="text-display text-base text-foreground">DETAILED BREAKDOWN</h3>
-        <InfoRow label="Recall Raw" value={String(recallRaw)} />
-        <InfoRow label="Lock-In Raw" value={String(lockinRaw)} />
-        <InfoRow label="Sharpness Raw" value={String(sharpnessRaw)} />
+        <h3 className="text-display text-base text-foreground">SESSION {sessionNumber} SCORES</h3>
+        <InfoRow label="Recall" value={`${recallRaw} / 100`} />
+        <InfoRow label="Lock-In" value={`${lockinRaw} / 100`} />
+        <InfoRow label="Sharpness" value={`${sharpnessRaw} / 100`} />
         {fluencyScore != null && <InfoRow label="Fluency" value={String(fluencyScore)} />}
         <div className="border-t pt-2">
           <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
@@ -365,9 +454,14 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
         <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{getFacilitatorScript(result.bfsComposite, result.bfsGap)}</p>
       </div>
 
-      <Button variant="hero" size="xl" className="w-full gap-2" onClick={onSave}>
-        <Save className="w-5 h-5" /> Save & Complete
-      </Button>
+      <div className="flex gap-3">
+        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={handleExportCSV}>
+          <Download className="w-5 h-5" /> Export CSV
+        </Button>
+        <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={onSave}>
+          <Save className="w-5 h-5" /> Save & Complete
+        </Button>
+      </div>
     </motion.div>
   );
 }
