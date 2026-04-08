@@ -49,6 +49,17 @@ export default function SharpnessScoreOutput() {
         timestamp_start: state.testStartTime || new Date().toISOString(),
         timestamp_end: state.testEndTime || new Date().toISOString(),
         sharpness_done: true,
+        sharpness_test_data: {
+          blockALog: state.blockALog,
+          blockBLog: state.blockBLog,
+          blockCLog: state.blockCLog,
+          choiceRTLog: state.choiceRTLog,
+          categorySwitchLog: state.categorySwitchLog,
+          dualTask,
+          choiceRT,
+          categorySwitch,
+          pillarScore,
+        },
         practice: isPractice,
       });
 

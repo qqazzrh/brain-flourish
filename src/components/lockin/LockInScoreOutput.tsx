@@ -52,6 +52,13 @@ export default function LockInScoreOutput() {
         timestamp_start: state.testStartTime || new Date().toISOString(),
         timestamp_end: state.testEndTime || new Date().toISOString(),
         lockin_done: true,
+        lockin_test_data: {
+          responseLog: state.responseLog,
+          interruptionFlags: state.interruptionFlags,
+          scores,
+          segments,
+          degradationIndex,
+        },
         practice: isPractice,
       });
 
