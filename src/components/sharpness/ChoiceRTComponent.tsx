@@ -6,8 +6,24 @@ import { motion } from 'framer-motion';
 const TOTAL_DURATION = 60;
 const PRACTICE_DURATION = 10;
 const RULE_BLOCK_DURATION = 15;
+const PRACTICE_RULE_BLOCK = 5; // Rule changes every 5s in practice so participants experience it
 const STIMULUS_CYCLE = 1000;
 const STIMULUS_DISPLAY = 200;
+
+const RULE_COLORS = {
+  compatible: {
+    bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+    border: 'border-emerald-300 dark:border-emerald-700',
+    bannerBg: 'bg-emerald-500',
+    text: 'text-emerald-700 dark:text-emerald-300',
+  },
+  incompatible: {
+    bg: 'bg-rose-50 dark:bg-rose-950/30',
+    border: 'border-rose-300 dark:border-rose-700',
+    bannerBg: 'bg-rose-500',
+    text: 'text-rose-700 dark:text-rose-300',
+  },
+};
 
 function generateChoiceSequence(count: number): number[] {
   const seq: number[] = [];
@@ -30,11 +46,10 @@ type Phase = 'instructions' | 'practice' | 'practiceComplete' | 'real';
 
 export default function ChoiceRTComponent() {
   const { state, goToScreen, addChoiceRTResponse } = useSharpness();
-  const [phase, setPhase] = useState<Phase>(state.skipPractice ? 'instructions' : 'instructions');
+  const [phase, setPhase] = useState<Phase>('instructions');
   const [timeLeft, setTimeLeft] = useState(PRACTICE_DURATION);
   const [flashingBox, setFlashingBox] = useState<number | null>(null);
   const [currentRule, setCurrentRule] = useState<'compatible' | 'incompatible'>('compatible');
-  const [ruleFlash, setRuleFlash] = useState(false);
   const [lastFeedback, setLastFeedback] = useState<'correct' | 'wrong' | null>(null);
 
   const sequenceRef = useRef(generateChoiceSequence(70));
@@ -45,9 +60,11 @@ export default function ChoiceRTComponent() {
   const cycleRef = useRef<NodeJS.Timeout | null>(null);
   const activeRef = useRef(false);
   const elapsedRef = useRef(0);
+  const phaseRef = useRef<Phase>('instructions');
 
-  const getCurrentRule = useCallback((): 'compatible' | 'incompatible' => {
-    const block = Math.floor(elapsedRef.current / RULE_BLOCK_DURATION);
+  const getRuleForElapsed = useCallback((elapsed: number, isPractice: boolean): 'compatible' | 'incompatible' => {
+    const blockSize = isPractice ? PRACTICE_RULE_BLOCK : RULE_BLOCK_DURATION;
+    const block = Math.floor(elapsed / blockSize);
     return block % 2 === 0 ? 'compatible' : 'incompatible';
   }, []);
 
@@ -63,21 +80,20 @@ export default function ChoiceRTComponent() {
     const seq = sequenceRef.current;
     if (idx >= seq.length) return;
 
-    if (!tappedRef.current) {
-      if (!isPractice) {
-        addChoiceRTResponse({
-          trial_index: idx,
-          stimulus_position: seq[idx],
-          rule: getCurrentRule(),
-          correct_response: getCurrentRule() === 'compatible' ? seq[idx] : getOpposite(seq[idx]),
-          actual_response: null,
-          stimulus_onset: new Date().toISOString(),
-          response_time_ms: null,
-          correct: false,
-        });
-      }
+    if (!tappedRef.current && !isPractice) {
+      const rule = getRuleForElapsed(elapsedRef.current, false);
+      addChoiceRTResponse({
+        trial_index: idx,
+        stimulus_position: seq[idx],
+        rule,
+        correct_response: rule === 'compatible' ? seq[idx] : getOpposite(seq[idx]),
+        actual_response: null,
+        stimulus_onset: new Date().toISOString(),
+        response_time_ms: null,
+        correct: false,
+      });
     }
-  }, [addChoiceRTResponse, getCurrentRule]);
+  }, [addChoiceRTResponse, getRuleForElapsed]);
 
   const runCycle = useCallback((isPractice: boolean) => {
     if (!activeRef.current) return;
@@ -107,12 +123,12 @@ export default function ChoiceRTComponent() {
 
     const idx = indexRef.current;
     const seq = sequenceRef.current;
-    const rule = getCurrentRule();
+    const isPractice = phaseRef.current === 'practice';
+    const rule = getRuleForElapsed(elapsedRef.current, isPractice);
     const correctZone = rule === 'compatible' ? seq[idx] : getOpposite(seq[idx]);
     const isCorrect = zone === correctZone;
 
-    if (phase === 'practice') {
-      // Show feedback during practice
+    if (isPractice) {
       setLastFeedback(isCorrect ? 'correct' : 'wrong');
       setTimeout(() => setLastFeedback(null), 400);
     } else {
@@ -127,9 +143,10 @@ export default function ChoiceRTComponent() {
         correct: isCorrect,
       });
     }
-  }, [addChoiceRTResponse, getCurrentRule, phase]);
+  }, [addChoiceRTResponse, getRuleForElapsed]);
 
   const startPractice = useCallback(() => {
+    phaseRef.current = 'practice';
     setPhase('practice');
     setTimeLeft(PRACTICE_DURATION);
     elapsedRef.current = 0;
@@ -139,9 +156,13 @@ export default function ChoiceRTComponent() {
 
     timerRef.current = setInterval(() => {
       elapsedRef.current++;
+      const newRule = getRuleForElapsed(elapsedRef.current, true);
+      setCurrentRule(newRule);
+
       setTimeLeft(prev => {
         if (prev <= 1) {
           cleanup();
+          phaseRef.current = 'practiceComplete';
           setPhase('practiceComplete');
           return 0;
         }
@@ -150,9 +171,10 @@ export default function ChoiceRTComponent() {
     }, 1000);
 
     runCycle(true);
-  }, [cleanup, runCycle]);
+  }, [cleanup, runCycle, getRuleForElapsed]);
 
   const startReal = useCallback(() => {
+    phaseRef.current = 'real';
     setPhase('real');
     setTimeLeft(TOTAL_DURATION);
     elapsedRef.current = 0;
@@ -163,14 +185,8 @@ export default function ChoiceRTComponent() {
 
     timerRef.current = setInterval(() => {
       elapsedRef.current++;
-      const newRule = elapsedRef.current % (RULE_BLOCK_DURATION * 2) < RULE_BLOCK_DURATION ? 'compatible' : 'incompatible';
-      setCurrentRule(prev => {
-        if (prev !== newRule) {
-          setRuleFlash(true);
-          setTimeout(() => setRuleFlash(false), 300);
-        }
-        return newRule;
-      });
+      const newRule = getRuleForElapsed(elapsedRef.current, false);
+      setCurrentRule(newRule);
 
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -183,7 +199,7 @@ export default function ChoiceRTComponent() {
     }, 1000);
 
     runCycle(false);
-  }, [cleanup, goToScreen, runCycle]);
+  }, [cleanup, goToScreen, runCycle, getRuleForElapsed]);
 
   useEffect(() => {
     return cleanup;
@@ -197,12 +213,18 @@ export default function ChoiceRTComponent() {
           <p className="text-display text-sm text-primary">PART 2 — REACTION SPEED</p>
           <div className="card-elevated p-6 space-y-4 text-left">
             <p className="text-lg text-foreground">Four boxes will appear on screen. One will flash at a time.</p>
-            <p className="text-base text-foreground">The rule changes every 15 seconds:</p>
-            <div className="space-y-2 pl-2">
-              <p className="text-base text-foreground"><span className="font-bold text-success">TAP THE BOX</span> → tap the box that flashed</p>
-              <p className="text-base text-foreground"><span className="font-bold text-destructive">TAP OPPOSITE</span> → tap the box on the opposite side (1↔4, 2↔3)</p>
+            <p className="text-base text-foreground">The rule changes — watch for the color:</p>
+            <div className="space-y-3 pl-2">
+              <div className={`rounded-lg px-4 py-3 ${RULE_COLORS.compatible.bg} border ${RULE_COLORS.compatible.border}`}>
+                <span className={`font-bold ${RULE_COLORS.compatible.text}`}>🟢 TAP THE BOX</span>
+                <span className="text-foreground ml-2">→ tap the box that flashed</span>
+              </div>
+              <div className={`rounded-lg px-4 py-3 ${RULE_COLORS.incompatible.bg} border ${RULE_COLORS.incompatible.border}`}>
+                <span className={`font-bold ${RULE_COLORS.incompatible.text}`}>🔴 TAP OPPOSITE</span>
+                <span className="text-foreground ml-2">→ tap the opposite side (1↔4, 2↔3)</span>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">The current rule is always shown at the top of the screen.</p>
+            <p className="text-sm text-muted-foreground">The entire screen changes color so you always know which rule is active.</p>
             <p className="text-base font-bold text-foreground">Go as fast as you can.</p>
           </div>
           {state.skipPractice ? (
@@ -211,7 +233,7 @@ export default function ChoiceRTComponent() {
             </Button>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Let's try a quick 10-second practice first.</p>
+              <p className="text-sm text-muted-foreground">10-second practice with rule changes, then 60-second real test.</p>
               <Button variant="hero" size="xl" className="w-full" onClick={startPractice}>
                 Start Practice
               </Button>
@@ -234,7 +256,7 @@ export default function ChoiceRTComponent() {
           <div className="card-elevated p-6 space-y-3">
             <p className="text-display text-lg text-foreground">Practice Complete!</p>
             <p className="text-base text-muted-foreground">
-              Good job. Now the real test begins — 60 seconds. The rule will switch between TAP THE BOX and TAP OPPOSITE every 15 seconds.
+              Good job. Now the real test begins — 60 seconds. Watch the screen color to know the active rule.
             </p>
             <p className="text-base font-bold text-foreground">Go as fast as you can.</p>
           </div>
@@ -248,23 +270,30 @@ export default function ChoiceRTComponent() {
 
   // Active test (practice or real)
   const isPractice = phase === 'practice';
-  const label = isPractice ? 'PRACTICE' : (currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE');
+  const colors = RULE_COLORS[currentRule];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background select-none">
-      {/* Header with rule */}
-      <div className={`px-6 py-3 flex items-center justify-between border-b transition-colors ${ruleFlash ? 'bg-warning/20' : ''}`}>
+    <motion.div
+      key={currentRule}
+      initial={{ opacity: 0.7 }}
+      animate={{ opacity: 1 }}
+      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
+    >
+      {/* Big rule banner */}
+      <div className={`${colors.bannerBg} px-6 py-4 text-center`}>
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-white text-2xl font-black tracking-wider">
+            {currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE'}
+          </span>
+        </div>
+        <p className="text-white/80 text-sm font-medium">
+          {currentRule === 'compatible' ? 'Tap the box that flashed' : 'Tap the opposite side (1↔4, 2↔3)'}
+        </p>
+      </div>
+
+      <div className={`px-6 py-2 flex items-center justify-between border-b ${colors.border}`}>
         <div>
-          {isPractice ? (
-            <span className="text-display text-lg text-warning">PRACTICE</span>
-          ) : (
-            <>
-              <span className="text-sm text-muted-foreground">Rule: </span>
-              <span className={`text-display text-lg ${currentRule === 'compatible' ? 'text-success' : 'text-destructive'}`}>
-                {currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE'}
-              </span>
-            </>
-          )}
+          {isPractice && <span className="text-xs font-bold text-amber-500 uppercase">Practice</span>}
         </div>
         <span className="text-sm font-mono text-muted-foreground">
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
@@ -273,7 +302,7 @@ export default function ChoiceRTComponent() {
 
       {/* Feedback during practice */}
       {isPractice && lastFeedback && (
-        <div className={`text-center py-1 text-sm font-bold ${lastFeedback === 'correct' ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}>
+        <div className={`text-center py-1 text-sm font-bold ${lastFeedback === 'correct' ? 'bg-emerald-200/50 text-emerald-700' : 'bg-rose-200/50 text-rose-700'}`}>
           {lastFeedback === 'correct' ? '✓ Correct!' : '✗ Wrong'}
         </div>
       )}
@@ -287,7 +316,7 @@ export default function ChoiceRTComponent() {
               className={`flex-1 aspect-square rounded-xl border-2 flex items-center justify-center transition-all ${
                 flashingBox === pos
                   ? 'bg-primary border-primary scale-105'
-                  : 'bg-muted/50 border-border'
+                  : 'bg-background/80 border-border'
               }`}
             >
               <span className={`text-display text-2xl ${flashingBox === pos ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
@@ -304,12 +333,12 @@ export default function ChoiceRTComponent() {
           <button
             key={zone}
             onClick={() => handleTapZone(zone)}
-            className="flex-1 min-h-[80px] rounded-xl border-2 border-border bg-muted/30 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target"
+            className={`flex-1 min-h-[80px] rounded-xl border-2 ${colors.border} bg-background/80 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target`}
           >
             <span className="text-display text-xl text-foreground">{zone}</span>
           </button>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
