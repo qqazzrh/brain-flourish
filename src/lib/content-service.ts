@@ -104,21 +104,20 @@ export async function getDistractionOptions(formId: string): Promise<Distraction
 
 // ====== Word Trials ======
 
-export async function getWordTrials(count: number = 20): Promise<WordTrial[]> {
-  // Try DB first
-  const { data, error } = await supabase
-    .from('word_trials')
-    .select('*');
+export async function getWordTrials(count: number = 20, ruleType?: string): Promise<WordTrial[]> {
+  let query = supabase.from('word_trials').select('*');
+  if (ruleType) query = query.eq('rule_type', ruleType);
+  const { data } = await query;
 
   if (data && data.length >= count) {
-    // Shuffle and pick
     const trials: WordTrial[] = data.map(d => ({
       word: d.word,
       syllables: d.syllables,
+      rule_type: (d as any).rule_type || 'meaning',
       options: (typeof d.options === 'string' ? JSON.parse(d.options) : d.options) as [string, string, string],
+      correct_answer: (d as any).correct_answer || '',
       answers: (typeof d.answers === 'string' ? JSON.parse(d.answers) : d.answers) as { meaning: string; letter: string; syllables: string },
     }));
-    // Shuffle
     for (let i = trials.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [trials[i], trials[j]] = [trials[j], trials[i]];
@@ -126,8 +125,7 @@ export async function getWordTrials(count: number = 20): Promise<WordTrial[]> {
     return trials.slice(0, count);
   }
 
-  // Fallback to hardcoded
-  const arr = [...WORD_LIBRARY];
+  const arr = [...WORD_LIBRARY].filter(w => !ruleType || w.rule_type === ruleType);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
