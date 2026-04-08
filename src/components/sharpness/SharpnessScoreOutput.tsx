@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeDualTaskScore, computeChoiceRTScore, computeCategorySwitchScore, computeSharpnessPillarScore } from '@/lib/sharpness-scoring';
-import { savePillarScore, saveParticipant } from '@/lib/storage';
+import { savePillarScore, saveParticipant, saveSession } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function SharpnessScoreOutput() {
   const { state, resetSharpness } = useSharpness();

@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { useLockIn } from '@/contexts/LockInContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeLockInScore, computeSegments } from '@/lib/stimulus-engine';
-import { savePillarScore, saveParticipant } from '@/lib/storage';
+import { savePillarScore, saveParticipant, saveSession } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Save, ArrowRight, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function LockInScoreOutput() {
   const { state, resetLockIn } = useLockIn();
