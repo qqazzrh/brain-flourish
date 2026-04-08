@@ -13,6 +13,7 @@ export default function SharpnessScoreOutput() {
   const { participant, isPractice, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const dualTask = useMemo(() => computeDualTaskScore(state.blockALog, state.blockBLog, state.blockCLog), [state.blockALog, state.blockBLog, state.blockCLog]);
   const choiceRT = useMemo(() => computeChoiceRTScore(state.choiceRTLog), [state.choiceRTLog]);
@@ -20,43 +21,30 @@ export default function SharpnessScoreOutput() {
   const pillarScore = useMemo(() => computeSharpnessPillarScore(dualTask.dualTaskScore, choiceRT.choiceRTScore, categorySwitch.categorySwitchingScore), [dualTask, choiceRT, categorySwitch]);
 
   const testDuration = state.testStartTime && state.testEndTime
-    ? Math.round((new Date(state.testEndTime).getTime() - new Date(state.testStartTime).getTime()) / 1000)
-    : 0;
+    ? Math.round((new Date(state.testEndTime).getTime() - new Date(state.testStartTime).getTime()) / 1000) : 0;
 
-  const handleSave = () => {
-    const existing = JSON.parse(localStorage.getItem('bfs_sharpness_sessions') || '[]');
-    existing.push({
-      participant_id: participant?.participant_id,
-      session_number: currentSessionNumber,
-      timestamp: new Date().toISOString(),
-      practice: isPractice,
-      dual_task: dualTask,
-      choice_rt: choiceRT,
-      category_switching: categorySwitch,
-      sharpness_pillar_score: pillarScore,
-    });
-    localStorage.setItem('bfs_sharpness_sessions', JSON.stringify(existing));
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+
     if (participant) {
-      savePillarScore(participant.participant_id, currentSessionNumber, {
+      await savePillarScore(participant.participant_id, currentSessionNumber, {
         sharpness_raw: pillarScore,
         sharpness_simon_effect_ms: choiceRT.simonEffect,
         sharpness_rt_switch_cost_ms: categorySwitch.rtSwitchCost,
       });
-      // Update participant metadata
       const updatedP = { ...participant };
       if (currentSessionNumber > updatedP.session_count) {
         updatedP.session_count = currentSessionNumber;
       }
       updatedP.last_session_date = new Date().toISOString().split('T')[0];
-      saveParticipant(updatedP);
+      await saveParticipant(updatedP);
     }
     setSaved(true);
+    setSaving(false);
   };
 
-  const handleBackToHub = () => {
-    resetSharpness();
-    navigate('/');
-  };
+  const handleBackToHub = () => { resetSharpness(); navigate('/'); };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
@@ -73,7 +61,6 @@ export default function SharpnessScoreOutput() {
           <InfoRow label="Test duration" value={`${Math.floor(testDuration / 60)} min ${testDuration % 60} sec`} />
         </div>
 
-        {/* Dual Task */}
         <div className="card-elevated p-4 space-y-2">
           <h3 className="text-display text-sm text-foreground">DUAL TASK</h3>
           <InfoRow label="Visual baseline" value={`${(dualTask.blockA.baselineAccuracy * 100).toFixed(1)}%`} />
@@ -82,24 +69,18 @@ export default function SharpnessScoreOutput() {
           <InfoRow label="Auditory dual-task" value={`${(dualTask.blockC.auditoryDualAccuracy * 100).toFixed(1)}%`} />
           <InfoRow label="Visual cost" value={`${(dualTask.visualDualTaskCost * 100).toFixed(1)}%`} />
           <InfoRow label="Auditory cost" value={`${(dualTask.auditoryDualTaskCost * 100).toFixed(1)}%`} />
-          <div className="border-t pt-2">
-            <InfoRow label="Dual Task Score" value={`${dualTask.dualTaskScore} / 100`} />
-          </div>
+          <div className="border-t pt-2"><InfoRow label="Dual Task Score" value={`${dualTask.dualTaskScore} / 100`} /></div>
         </div>
 
-        {/* Choice RT */}
         <div className="card-elevated p-4 space-y-2">
           <h3 className="text-display text-sm text-foreground">CHOICE REACTION TIME</h3>
           <InfoRow label="Compatible mean RT" value={`${choiceRT.compatibleMeanRT}ms`} />
           <InfoRow label="Incompatible mean RT" value={`${choiceRT.incompatibleMeanRT}ms`} />
           <InfoRow label="Simon Effect" value={`${choiceRT.simonEffect}ms`} />
           <InfoRow label="Accuracy" value={`${(choiceRT.overallAccuracy * 100).toFixed(1)}%`} />
-          <div className="border-t pt-2">
-            <InfoRow label="Choice RT Score" value={`${choiceRT.choiceRTScore} / 100`} />
-          </div>
+          <div className="border-t pt-2"><InfoRow label="Choice RT Score" value={`${choiceRT.choiceRTScore} / 100`} /></div>
         </div>
 
-        {/* Category Switching */}
         <div className="card-elevated p-4 space-y-2">
           <h3 className="text-display text-sm text-foreground">CATEGORY SWITCHING</h3>
           <InfoRow label="Overall accuracy" value={`${(categorySwitch.overallAccuracy * 100).toFixed(1)}%`} />
@@ -107,12 +88,9 @@ export default function SharpnessScoreOutput() {
           <InfoRow label="Stay accuracy" value={`${(categorySwitch.stayAccuracy * 100).toFixed(1)}%`} />
           <InfoRow label="Accuracy switch cost" value={`${(categorySwitch.accuracySwitchCost * 100).toFixed(1)}%`} />
           <InfoRow label="RT switch cost" value={`${categorySwitch.rtSwitchCost}ms`} />
-          <div className="border-t pt-2">
-            <InfoRow label="Category Switch Score" value={`${categorySwitch.categorySwitchingScore} / 100`} />
-          </div>
+          <div className="border-t pt-2"><InfoRow label="Category Switch Score" value={`${categorySwitch.categorySwitchingScore} / 100`} /></div>
         </div>
 
-        {/* Pillar Score */}
         <div className="card-elevated p-6 text-center space-y-3">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">Sharpness Pillar Score</p>
           <p className="text-display text-5xl text-primary">{pillarScore}<span className="text-xl text-muted-foreground"> / 100</span></p>
@@ -123,19 +101,15 @@ export default function SharpnessScoreOutput() {
           </div>
         </div>
 
-        {/* Script */}
         <div className="card-sunken p-4 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
-          <p className="text-lg text-foreground leading-relaxed">
-            "Your Sharpness score is {pillarScore} out of 100."
-          </p>
+          <p className="text-lg text-foreground leading-relaxed">"Your Sharpness score is {pillarScore} out of 100."</p>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 pb-4">
           {!saved ? (
-            <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleSave}>
-              <Save className="w-5 h-5" /> Save Session
+            <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleSave} disabled={saving}>
+              <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Session'}
             </Button>
           ) : (
             <div className="w-full space-y-3">

@@ -14,7 +14,196 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      participant_id_counter: {
+        Row: {
+          id: number
+          next_id: number
+        }
+        Insert: {
+          id?: number
+          next_id?: number
+        }
+        Update: {
+          id?: number
+          next_id?: number
+        }
+        Relationships: []
+      }
+      participants: {
+        Row: {
+          age_band: string | null
+          created_at: string
+          created_at_location: string
+          created_by_facilitator: string
+          demand_profile: string | null
+          education_level: string | null
+          gender: string | null
+          id: string
+          last_session_date: string | null
+          name: string
+          occupation_type: string | null
+          participant_id: string
+          seniority_level: string | null
+          session_count: number
+          updated_at: string
+        }
+        Insert: {
+          age_band?: string | null
+          created_at?: string
+          created_at_location?: string
+          created_by_facilitator?: string
+          demand_profile?: string | null
+          education_level?: string | null
+          gender?: string | null
+          id?: string
+          last_session_date?: string | null
+          name?: string
+          occupation_type?: string | null
+          participant_id: string
+          seniority_level?: string | null
+          session_count?: number
+          updated_at?: string
+        }
+        Update: {
+          age_band?: string | null
+          created_at?: string
+          created_at_location?: string
+          created_by_facilitator?: string
+          demand_profile?: string | null
+          education_level?: string | null
+          gender?: string | null
+          id?: string
+          last_session_date?: string | null
+          name?: string
+          occupation_type?: string | null
+          participant_id?: string
+          seniority_level?: string | null
+          session_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pillar_scores: {
+        Row: {
+          created_at: string
+          id: string
+          lockin_degradation_index: number | null
+          lockin_raw: number | null
+          participant_id: string
+          recall_fluency: number | null
+          recall_raw: number | null
+          session_number: number
+          sharpness_raw: number | null
+          sharpness_rt_switch_cost_ms: number | null
+          sharpness_simon_effect_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lockin_degradation_index?: number | null
+          lockin_raw?: number | null
+          participant_id: string
+          recall_fluency?: number | null
+          recall_raw?: number | null
+          session_number?: number
+          sharpness_raw?: number | null
+          sharpness_rt_switch_cost_ms?: number | null
+          sharpness_simon_effect_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lockin_degradation_index?: number | null
+          lockin_raw?: number | null
+          participant_id?: string
+          recall_fluency?: number | null
+          recall_raw?: number | null
+          session_number?: number
+          sharpness_raw?: number | null
+          sharpness_rt_switch_cost_ms?: number | null
+          sharpness_simon_effect_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pillar_scores_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          facilitator_id: string
+          form_id: string
+          id: string
+          location: string
+          lockin_done: boolean
+          participant_id: string
+          practice: boolean
+          recall_done: boolean
+          recall_test_data: Json | null
+          session_duration_seconds: number | null
+          session_id: string
+          session_number: number
+          sharpness_done: boolean
+          timestamp_end: string | null
+          timestamp_start: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          facilitator_id?: string
+          form_id?: string
+          id?: string
+          location?: string
+          lockin_done?: boolean
+          participant_id: string
+          practice?: boolean
+          recall_done?: boolean
+          recall_test_data?: Json | null
+          session_duration_seconds?: number | null
+          session_id: string
+          session_number?: number
+          sharpness_done?: boolean
+          timestamp_end?: string | null
+          timestamp_start?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          facilitator_id?: string
+          form_id?: string
+          id?: string
+          location?: string
+          lockin_done?: boolean
+          participant_id?: string
+          practice?: boolean
+          recall_done?: boolean
+          recall_test_data?: Json | null
+          session_duration_seconds?: number | null
+          session_id?: string
+          session_number?: number
+          sharpness_done?: boolean
+          timestamp_end?: string | null
+          timestamp_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
