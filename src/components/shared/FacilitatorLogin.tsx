@@ -18,7 +18,7 @@ export default function FacilitatorLogin() {
   }, []);
 
   const handleContinue = (practice: boolean) => {
-    const fac = FACILITATORS.find(f => f.id === selectedFac);
+    const fac = facilitators.find(f => f.id === selectedFac);
     if (!fac || !location.trim()) return;
     setFacilitator(fac, location.trim());
     setPractice(practice);
