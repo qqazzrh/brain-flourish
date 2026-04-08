@@ -1,5 +1,28 @@
 import { supabase } from '@/integrations/supabase/client';
-import { ParticipantRecord, FormId } from './types';
+import { ParticipantRecord, FormId, Facilitator } from './types';
+
+// ====== Facilitators ======
+
+export async function getFacilitators(): Promise<Facilitator[]> {
+  const { data } = await supabase.from('facilitators').select('facilitator_id, name').order('facilitator_id');
+  if (!data) return [];
+  return data.map(d => ({ id: d.facilitator_id, name: d.name }));
+}
+
+export async function saveFacilitator(fac: Facilitator & { email?: string; pin?: string }) {
+  const { data: existing } = await supabase
+    .from('facilitators')
+    .select('id')
+    .eq('facilitator_id', fac.id)
+    .maybeSingle();
+
+  const row = { facilitator_id: fac.id, name: fac.name, email: fac.email || '', pin: fac.pin || '' };
+  if (existing) {
+    await supabase.from('facilitators').update(row).eq('facilitator_id', fac.id);
+  } else {
+    await supabase.from('facilitators').insert(row);
+  }
+}
 
 export interface PillarScores {
   participant_id: string;
