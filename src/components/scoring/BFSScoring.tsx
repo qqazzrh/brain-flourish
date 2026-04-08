@@ -215,22 +215,6 @@ export default function BFSScoring() {
             recallRaw={parseFloat(recallRaw) || 0}
             lockinRaw={parseFloat(lockinRaw) || 0}
             sharpnessRaw={parseFloat(sharpnessRaw) || 0}
-            onContinue={() => setScreen('facilitator_output')}
-          />
-        )}
-
-        {screen === 'facilitator_output' && bfsResult && (
-          <FacilitatorDisplay
-            result={bfsResult}
-            recallRaw={parseFloat(recallRaw)}
-            lockinRaw={parseFloat(lockinRaw)}
-            sharpnessRaw={parseFloat(sharpnessRaw)}
-            fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined}
-            participantId={participant?.participant_id || 'Unknown'}
-            sessionNumber={sessionNum}
-            allScores={allSessionScores}
-            ageBand={ageBand as AgeBand}
-            demandProfile={demandProfile as DemandProfile}
             onSave={() => setScreen('saved')}
           />
         )}
