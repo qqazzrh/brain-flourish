@@ -77,6 +77,8 @@ export default function DualTaskComponent() {
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [showDigit, setShowDigit] = useState(false);
   const [toneActive, setToneActive] = useState(false);
+  const [leftWrong, setLeftWrong] = useState(false);
+  const [rightWrong, setRightWrong] = useState(false);
 
   const visualSeqRef = useRef<number[]>([]);
   const toneScheduleRef = useRef<{ time: number; isHigh: boolean }[]>([]);
@@ -224,6 +226,11 @@ export default function DualTaskComponent() {
     const rt = Math.round(performance.now() - stimOnsetRef.current);
     const isEven = currentDigitIsEvenRef.current;
 
+    if (!isEven) {
+      setLeftWrong(true);
+      setTimeout(() => setLeftWrong(false), 300);
+    }
+
     addResponse({
       channel: 'visual', stimulus_index: visualIndexRef.current,
       stimulus_value: visualSeqRef.current[visualIndexRef.current] || 0,
@@ -239,6 +246,11 @@ export default function DualTaskComponent() {
     auditoryTappedRef.current = true;
     const rt = Math.round(performance.now() - toneOnsetRef.current);
     const isHigh = currentToneIsHighRef.current;
+
+    if (!isHigh) {
+      setRightWrong(true);
+      setTimeout(() => setRightWrong(false), 300);
+    }
 
     addResponse({
       channel: 'auditory', stimulus_index: toneIndexRef.current,
@@ -377,7 +389,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockA' || phase === 'blockC') && (
           <button
             onClick={handleLeftTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 ${blockStyle.border} bg-background/80 flex items-center justify-center active:bg-primary/20 transition-colors tap-target`}
+            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${leftWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${blockStyle.border} bg-background/80 active:bg-primary/20`}`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-primary">EVEN</p>
@@ -388,7 +400,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockB' || phase === 'blockC') && (
           <button
             onClick={handleRightTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 ${blockStyle.border} bg-background/80 flex items-center justify-center active:bg-warning/20 transition-colors tap-target`}
+            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${rightWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${blockStyle.border} bg-background/80 active:bg-warning/20`}`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-warning">HIGH</p>

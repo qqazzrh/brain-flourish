@@ -18,6 +18,7 @@ export default function LockInActiveTest() {
   const [timeLeft, setTimeLeft] = useState(actualDuration);
   const [started, setStarted] = useState(false);
   const [tapFlash, setTapFlash] = useState(false);
+  const [wrongFlash, setWrongFlash] = useState(false);
 
   const sequenceRef = useRef(generateSequence(actualStimuli, 0.10, 3));
   const indexRef = useRef(0);
@@ -63,8 +64,13 @@ export default function LockInActiveTest() {
     const seq = sequenceRef.current;
     const isTarget = seq.targetIndices.has(idx);
     
-    setTapFlash(true);
-    setTimeout(() => setTapFlash(false), 100);
+    if (isTarget) {
+      setWrongFlash(true);
+      setTimeout(() => setWrongFlash(false), 300);
+    } else {
+      setTapFlash(true);
+      setTimeout(() => setTapFlash(false), 100);
+    }
     
     logResponse({
       stimulus_index: idx,
@@ -140,7 +146,7 @@ export default function LockInActiveTest() {
 
   return (
     <div 
-      className={`min-h-screen flex flex-col bg-background select-none transition-colors duration-100 ${tapFlash ? 'bg-muted' : ''}`}
+      className={`min-h-screen flex flex-col bg-background select-none transition-colors duration-100 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : tapFlash ? 'bg-muted' : ''}`}
       onClick={handleTap}
     >
       {/* Timer - top right, small */}
@@ -170,7 +176,7 @@ export default function LockInActiveTest() {
       </div>
 
       {/* Tap zone - unlabelled in active test */}
-      <div className="h-[35vh] mx-6 mb-6 rounded-xl border border-border/20" />
+      <div className={`h-[35vh] mx-6 mb-6 rounded-xl border transition-colors duration-150 ${wrongFlash ? 'border-red-500 bg-red-200/50 dark:bg-red-900/30' : 'border-border/20'}`} />
     </div>
   );
 }
