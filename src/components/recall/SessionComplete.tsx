@@ -55,7 +55,7 @@ export default function SessionComplete() {
     setSaving(true);
 
     try {
-      const sessionId = await generateSessionId();
+      const sessionId = `${participant.participant_id}-S${currentSessionNumber}`;
       const now = new Date().toISOString();
       const session: any = {
         session_id: sessionId,
