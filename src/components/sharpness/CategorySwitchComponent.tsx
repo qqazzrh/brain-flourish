@@ -146,7 +146,7 @@ export default function CategorySwitchComponent() {
     if (!activeRef.current || !currentTrial) return;
 
     const rt = Math.round(performance.now() - stimOnsetRef.current);
-    const correctAnswer = currentTrial.answers[currentRule];
+    const correctAnswer = currentTrial.correct_answer || currentTrial.answers[currentRule];
     const isCorrect = option === correctAnswer;
 
     if (!isCorrect) {
