@@ -312,25 +312,31 @@ export type Database = {
       word_trials: {
         Row: {
           answers: Json
+          correct_answer: string
           created_at: string
           id: string
           options: Json
+          rule_type: string
           syllables: number
           word: string
         }
         Insert: {
           answers: Json
+          correct_answer?: string
           created_at?: string
           id?: string
           options: Json
+          rule_type?: string
           syllables: number
           word: string
         }
         Update: {
           answers?: Json
+          correct_answer?: string
           created_at?: string
           id?: string
           options?: Json
+          rule_type?: string
           syllables?: number
           word?: string
         }
