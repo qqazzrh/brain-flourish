@@ -1216,7 +1216,7 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
     doc.text('Recall', cols[1], y);
     doc.text('Lock-In', cols[2], y);
     doc.text('Sharpness', cols[3], y);
-    doc.text('BFS', cols[4], y);
+    doc.text('Score', cols[4], y);
     y += 2;
     doc.line(margin, y, w - margin, y);
     y += 5;
@@ -1239,7 +1239,7 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
     }
   }
 
-  doc.save(`${participantId}_session${sessionNumber}_BFS_report.pdf`);
+  doc.save(`${participantId}_session${sessionNumber}_BrainScore_report.pdf`);
 }
 
 
