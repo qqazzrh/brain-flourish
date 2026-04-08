@@ -321,12 +321,12 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
   const [allScores, setAllScores] = useState<PillarScores[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     getAllPillarScoresForParticipant(participant.participant_id).then(scores => {
       setAllScores(scores);
       setLoaded(true);
     });
-  });
+  }, [participant.participant_id]);
 
   const totalSessions = Math.max(participant.session_count, allScores.length);
 
