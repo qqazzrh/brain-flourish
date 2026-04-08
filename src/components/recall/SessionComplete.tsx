@@ -68,6 +68,7 @@ export default function SessionComplete() {
         timestamp_end: now,
         session_duration_seconds: sessionDuration,
         practice: isPractice,
+        recall_done: true,
         recall_test: {
           form_id: assignedForm,
           passage_domain: formDomain || 'Unknown',
