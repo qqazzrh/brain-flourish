@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
-import { getPillarScores, getAllPillarScoresForParticipant } from '@/lib/storage';
+import { getPillarScores, getAllPillarScoresForParticipant, PillarScores } from '@/lib/storage';
 import { AgeBand, DemandProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,42 +18,59 @@ export default function BFSScoring() {
   const { participant, currentSessionNumber } = useSession();
   const [screen, setScreen] = useState<Screen>('input');
   const [selectedSession, setSelectedSession] = useState(String(currentSessionNumber));
+  const [allSessionScores, setAllSessionScores] = useState<PillarScores[]>([]);
+  const [pillarScores, setPillarScores] = useState<PillarScores | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const hasDemographics = !!participant?.demographics;
   const autoAge = participant?.demographics?.age_band || '';
   const autoProfile = participant?.demographics?.demand_profile || '';
 
-  // Get all sessions' scores for history
-  const allSessionScores = useMemo(() => {
-    if (!participant) return [];
-    return getAllPillarScoresForParticipant(participant.participant_id);
-  }, [participant]);
+  const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
+  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
+  const [recallRaw, setRecallRaw] = useState('');
+  const [lockinRaw, setLockinRaw] = useState('');
+  const [sharpnessRaw, setSharpnessRaw] = useState('');
+  const [fluencyScore, setFluencyScore] = useState('');
+  const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
 
-  const sessionNum = parseInt(selectedSession) || currentSessionNumber;
-  const pillarScores = participant ? getPillarScores(participant.participant_id, sessionNum) : null;
+  // Load data
+  useEffect(() => {
+    if (!participant) { setLoading(false); return; }
+    const load = async () => {
+      const [all, current] = await Promise.all([
+        getAllPillarScoresForParticipant(participant.participant_id),
+        getPillarScores(participant.participant_id, currentSessionNumber),
+      ]);
+      setAllSessionScores(all);
+      setPillarScores(current);
+      if (current) {
+        setRecallRaw(current.recall_raw != null ? String(current.recall_raw) : '');
+        setLockinRaw(current.lockin_raw != null ? String(current.lockin_raw) : '');
+        setSharpnessRaw(current.sharpness_raw != null ? String(current.sharpness_raw) : '');
+        setFluencyScore(current.recall_fluency != null ? String(current.recall_fluency) : '');
+      }
+      setLoading(false);
+    };
+    load();
+  }, [participant, currentSessionNumber]);
+
   const hasAutoScores = !!(pillarScores?.recall_raw != null || pillarScores?.lockin_raw != null || pillarScores?.sharpness_raw != null);
 
-  // Build session options
-  const sessionOptions = useMemo(() => {
+  const sessionNum = parseInt(selectedSession) || currentSessionNumber;
+
+  const sessionOptions = (() => {
     const sessions: number[] = [];
     const maxSess = Math.max(currentSessionNumber, ...allSessionScores.map(s => s.session_number));
     for (let i = 1; i <= maxSess; i++) sessions.push(i);
     return sessions;
-  }, [currentSessionNumber, allSessionScores]);
+  })();
 
-  // Input state
-  const [ageBand, setAgeBand] = useState<AgeBand | ''>(autoAge as AgeBand | '');
-  const [demandProfile, setDemandProfile] = useState<DemandProfile | ''>(autoProfile as DemandProfile | '');
-  const [recallRaw, setRecallRaw] = useState(pillarScores?.recall_raw != null ? String(pillarScores.recall_raw) : '');
-  const [lockinRaw, setLockinRaw] = useState(pillarScores?.lockin_raw != null ? String(pillarScores.lockin_raw) : '');
-  const [sharpnessRaw, setSharpnessRaw] = useState(pillarScores?.sharpness_raw != null ? String(pillarScores.sharpness_raw) : '');
-  const [fluencyScore, setFluencyScore] = useState(pillarScores?.recall_fluency != null ? String(pillarScores.recall_fluency) : '');
-
-  // When session selection changes, update scores
-  const handleSessionChange = (val: string) => {
+  const handleSessionChange = async (val: string) => {
     setSelectedSession(val);
     const num = parseInt(val);
-    const scores = participant ? getPillarScores(participant.participant_id, num) : null;
+    const scores = await getPillarScores(participant?.participant_id || '', num);
+    setPillarScores(scores);
     setRecallRaw(scores?.recall_raw != null ? String(scores.recall_raw) : '');
     setLockinRaw(scores?.lockin_raw != null ? String(scores.lockin_raw) : '');
     setSharpnessRaw(scores?.sharpness_raw != null ? String(scores.sharpness_raw) : '');
@@ -61,30 +78,25 @@ export default function BFSScoring() {
     setScreen('input');
   };
 
-  const [bfsResult, setBfsResult] = useState<BFSResult | null>(null);
-
   const handleCalculate = () => {
     if (!ageBand || !demandProfile) return;
-    const rr = parseFloat(recallRaw) || 0;
-    const lr = parseFloat(lockinRaw) || 0;
-    const sr = parseFloat(sharpnessRaw) || 0;
-    const result = computeBFS(rr, lr, sr, demandProfile, ageBand);
-    if (result) {
-      setBfsResult(result);
-      setScreen('participant_result');
-    }
+    const result = computeBFS(parseFloat(recallRaw) || 0, parseFloat(lockinRaw) || 0, parseFloat(sharpnessRaw) || 0, demandProfile, ageBand);
+    if (result) { setBfsResult(result); setScreen('participant_result'); }
   };
 
   const canCalculate = ageBand && demandProfile && recallRaw && lockinRaw && sharpnessRaw;
 
-  // Find previous session's BFS for movement comparison
-  const getPreviousSessionBFS = (): number | null => {
+  const getPreviousSessionBFS = useCallback(async (): Promise<number | null> => {
     if (sessionNum <= 1) return null;
-    const prevScores = participant ? getPillarScores(participant.participant_id, sessionNum - 1) : null;
+    const prevScores = await getPillarScores(participant?.participant_id || '', sessionNum - 1);
     if (!prevScores || prevScores.recall_raw == null || prevScores.lockin_raw == null || prevScores.sharpness_raw == null) return null;
     const prevResult = computeBFS(prevScores.recall_raw, prevScores.lockin_raw, prevScores.sharpness_raw, demandProfile as DemandProfile, ageBand as AgeBand);
     return prevResult?.bfsComposite || null;
-  };
+  }, [sessionNum, participant, demandProfile, ageBand]);
+
+  if (loading) {
+    return <div className="text-center p-8 text-muted-foreground">Loading scores...</div>;
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -93,12 +105,9 @@ export default function BFSScoring() {
           <motion.div key="input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-display text-2xl text-foreground">BFS Scoring</h2>
-              <p className="text-sm text-muted-foreground">
-                Session {sessionNum} scores for {participant?.participant_id || 'participant'}
-              </p>
+              <p className="text-sm text-muted-foreground">Session {sessionNum} scores for {participant?.participant_id || 'participant'}</p>
             </div>
 
-            {/* Session Selector */}
             {sessionOptions.length > 1 && (
               <div className="card-elevated p-4">
                 <div className="flex items-center gap-4">
@@ -107,7 +116,7 @@ export default function BFSScoring() {
                     <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {sessionOptions.map(s => {
-                        const sc = getPillarScores(participant?.participant_id || '', s);
+                        const sc = allSessionScores.find(x => x.session_number === s);
                         const complete = sc?.recall_raw != null && sc?.lockin_raw != null && sc?.sharpness_raw != null;
                         const partial = sc?.recall_raw != null || sc?.lockin_raw != null || sc?.sharpness_raw != null;
                         return (
@@ -122,15 +131,12 @@ export default function BFSScoring() {
               </div>
             )}
 
-            {/* Biodata */}
             <div className="card-elevated p-6 space-y-4">
               <p className="text-display text-sm text-primary">PARTICIPANT BIODATA</p>
               {participant && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>ID: <strong className="text-foreground">{participant.participant_id}</strong></span>
-                  {participant.demographics && (
-                    <span className="ml-2">• <strong className="text-foreground">{participant.demographics.name}</strong></span>
-                  )}
+                  {participant.demographics && <span className="ml-2">• <strong className="text-foreground">{participant.demographics.name}</strong></span>}
                 </div>
               )}
               {hasDemographics && (
@@ -143,18 +149,14 @@ export default function BFSScoring() {
                   <label className="text-sm font-medium text-foreground">Age Band</label>
                   <Select value={ageBand} onValueChange={(v) => setAgeBand(v as AgeBand)} disabled={hasDemographics}>
                     <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
-                    <SelectContent>
-                      {AGE_BANDS.map(ab => <SelectItem key={ab} value={ab}>{ab}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{AGE_BANDS.map(ab => <SelectItem key={ab} value={ab}>{ab}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Demand Profile</label>
                   <Select value={demandProfile} onValueChange={(v) => setDemandProfile(v as DemandProfile)} disabled={hasDemographics}>
                     <SelectTrigger className={hasDemographics ? 'bg-muted' : ''}><SelectValue placeholder="Select..." /></SelectTrigger>
-                    <SelectContent>
-                      {DEMAND_PROFILES.map(dp => <SelectItem key={dp} value={dp}>{dp}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{DEMAND_PROFILES.map(dp => <SelectItem key={dp} value={dp}>{dp}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
@@ -167,7 +169,6 @@ export default function BFSScoring() {
               )}
             </div>
 
-            {/* Raw Pillar Scores */}
             <div className="card-elevated p-6 space-y-4">
               <p className="text-display text-sm text-primary">RAW PILLAR SCORES — SESSION {sessionNum}</p>
               {hasAutoScores && (
@@ -194,7 +195,6 @@ export default function BFSScoring() {
               </div>
             </div>
 
-            {/* Secondary (optional) */}
             <div className="card-elevated p-6 space-y-4">
               <p className="text-display text-sm text-muted-foreground">SECONDARY SCORES (OPTIONAL)</p>
               <div className="grid grid-cols-3 gap-4">
@@ -205,11 +205,8 @@ export default function BFSScoring() {
               </div>
             </div>
 
-            <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>
-              Calculate BFS
-            </Button>
+            <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>Calculate BFS</Button>
 
-            {/* Session History Table */}
             {allSessionScores.length > 0 && (
               <div className="card-elevated p-6 space-y-4">
                 <p className="text-display text-sm text-primary">SESSION HISTORY</p>
@@ -250,47 +247,30 @@ export default function BFSScoring() {
         )}
 
         {screen === 'participant_result' && bfsResult && (
-          <ParticipantDisplay
-            result={bfsResult}
-            lastBFS={getPreviousSessionBFS()}
-            sessionNumber={sessionNum}
-            onContinue={() => setScreen('facilitator_output')}
-          />
+          <ParticipantDisplay result={bfsResult} sessionNumber={sessionNum} ageBand={ageBand as AgeBand} demandProfile={demandProfile as DemandProfile} participantId={participant?.participant_id || ''} getPreviousBFS={getPreviousSessionBFS} onContinue={() => setScreen('facilitator_output')} />
         )}
 
         {screen === 'facilitator_output' && bfsResult && (
-          <FacilitatorDisplay
-            result={bfsResult}
-            recallRaw={parseFloat(recallRaw)}
-            lockinRaw={parseFloat(lockinRaw)}
-            sharpnessRaw={parseFloat(sharpnessRaw)}
-            fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined}
-            participantId={participant?.participant_id || 'Unknown'}
-            sessionNumber={sessionNum}
-            onSave={() => setScreen('saved')}
-          />
+          <FacilitatorDisplay result={bfsResult} recallRaw={parseFloat(recallRaw)} lockinRaw={parseFloat(lockinRaw)} sharpnessRaw={parseFloat(sharpnessRaw)} fluencyScore={fluencyScore ? parseInt(fluencyScore) : undefined} participantId={participant?.participant_id || 'Unknown'} sessionNumber={sessionNum} onSave={() => setScreen('saved')} />
         )}
 
         {screen === 'saved' && bfsResult && (
-          <SavedScreen
-            result={bfsResult}
-            participantId={participant?.participant_id || 'Unknown'}
-            sessionNumber={sessionNum}
-            onNewSession={() => setScreen('input')}
-          />
+          <SavedScreen result={bfsResult} participantId={participant?.participant_id || 'Unknown'} sessionNumber={sessionNum} onNewSession={() => setScreen('input')} />
         )}
       </AnimatePresence>
     </div>
   );
 }
 
-// === Participant BFS Display ===
-function ParticipantDisplay({ result, lastBFS, sessionNumber, onContinue }: {
-  result: BFSResult;
-  lastBFS: number | null;
-  sessionNumber: number;
-  onContinue: () => void;
+function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, demandProfile, getPreviousBFS, onContinue }: {
+  result: BFSResult; sessionNumber: number; participantId: string; ageBand: AgeBand; demandProfile: DemandProfile; getPreviousBFS: () => Promise<number | null>; onContinue: () => void;
 }) {
+  const [lastBFS, setLastBFS] = useState<number | null>(null);
+
+  useEffect(() => {
+    getPreviousBFS().then(setLastBFS);
+  }, [getPreviousBFS]);
+
   const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
 
   return (
@@ -312,230 +292,124 @@ function ParticipantDisplay({ result, lastBFS, sessionNumber, onContinue }: {
           <p className="text-display text-5xl text-foreground">{result.bfsComposite}<span className="text-2xl text-muted-foreground"> / 100</span></p>
         </div>
         <div className="flex justify-center gap-8">
-          <div>
-            <p className="text-xs text-muted-foreground">Target</p>
-            <p className="text-display text-lg text-primary">{result.bfsTarget}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Gap</p>
-            <p className={`text-display text-lg ${result.bfsGap < 0 ? 'text-destructive' : result.bfsGap > 0 ? 'text-success' : 'text-foreground'}`}>
-              {result.bfsGap > 0 ? '+' : ''}{result.bfsGap} points
-            </p>
-          </div>
+          <div><p className="text-xs text-muted-foreground">Target</p><p className="text-display text-lg text-primary">{result.bfsTarget}</p></div>
+          <div><p className="text-xs text-muted-foreground">Gap</p><p className={`text-display text-lg ${result.bfsGap < 0 ? 'text-destructive' : result.bfsGap > 0 ? 'text-success' : 'text-foreground'}`}>{result.bfsGap > 0 ? '+' : ''}{result.bfsGap} points</p></div>
         </div>
       </div>
 
       {movement != null && (
         <div className="card-elevated p-4 flex items-center justify-center gap-4">
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Previous BFS</p>
-            <p className="text-display text-lg text-foreground">{lastBFS}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Today's BFS</p>
-            <p className="text-display text-lg text-foreground">{result.bfsComposite}</p>
-          </div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">Previous BFS</p><p className="text-display text-lg text-foreground">{lastBFS}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">Today's BFS</p><p className="text-display text-lg text-foreground">{result.bfsComposite}</p></div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Movement</p>
-            <p className={`text-display text-lg flex items-center gap-1 ${movement > 0 ? 'text-success' : movement < 0 ? 'text-destructive' : 'text-foreground'}`}>
-              {movement > 0 ? <ArrowUp className="w-4 h-4" /> : movement < 0 ? <ArrowDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-              {movement > 0 ? '+' : ''}{movement}
-            </p>
+            <div className="flex items-center justify-center gap-1">
+              {movement > 0 ? <ArrowUp className="w-4 h-4 text-success" /> : movement < 0 ? <ArrowDown className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
+              <p className={`text-display text-lg ${movement > 0 ? 'text-success' : movement < 0 ? 'text-destructive' : 'text-foreground'}`}>{movement > 0 ? '+' : ''}{movement}</p>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="card-sunken p-4 text-center">
-        <p className="text-sm text-muted-foreground italic">{getBFSMessage(result.bfsStatus)}</p>
+      <div className="card-sunken p-5 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Message</p>
+        <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsComposite, result.bfsTarget)}</p>
       </div>
 
-      <Button variant="hero" size="xl" className="w-full" onClick={onContinue}>Continue</Button>
+      <Button variant="hero" size="xl" className="w-full" onClick={onContinue}>View Facilitator Output</Button>
     </motion.div>
   );
 }
 
-// === Bar component ===
 function PillarBar({ label, score, target }: { label: string; score: number; target: number }) {
-  const scorePos = Math.min(score, 100);
-  const targetPos = Math.min(target, 100);
-
   return (
-    <div className="space-y-1">
-      <p className="text-display text-sm text-foreground">{label}</p>
-      <div className="relative h-8 bg-muted rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${scorePos}%` }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          className={`absolute inset-y-0 left-0 rounded-full ${scorePos < targetPos ? 'bg-warning' : 'bg-success'}`}
-        />
-        <div className="absolute inset-y-0 flex items-center" style={{ left: `${targetPos}%` }}>
-          <div className="w-0.5 h-full bg-foreground/40" />
-        </div>
-        <div className="absolute inset-y-0 flex items-center px-3" style={{ left: `${Math.max(0, scorePos - 8)}%` }}>
-          <span className="text-xs font-bold text-foreground">{score}</span>
-        </div>
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-baseline">
+        <span className="text-display text-sm text-foreground">{label}</span>
+        <span className="text-display text-lg text-foreground">{score}</span>
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>0</span>
-        <span style={{ marginLeft: `${targetPos - 5}%` }} className="text-foreground/60">{target} target</span>
-        <span>100</span>
+      <div className="h-3 bg-muted rounded-full overflow-hidden relative">
+        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(score, 100)}%` }} />
+        <div className="absolute top-0 h-full w-0.5 bg-foreground/40" style={{ left: `${target}%` }} />
       </div>
     </div>
   );
 }
 
-// === Facilitator Full Output ===
 function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, onSave }: {
-  result: BFSResult;
-  recallRaw: number;
-  lockinRaw: number;
-  sharpnessRaw: number;
-  fluencyScore?: number;
-  participantId: string;
-  sessionNumber: number;
-  onSave: () => void;
+  result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; onSave: () => void;
 }) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-display text-xl text-foreground">BFS FULL OUTPUT — SESSION {sessionNumber}</h2>
-      </div>
-
-      <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-2 text-xs text-primary font-medium">
-        DATA RETRIEVED FROM PARTICIPANT RECORD
-      </div>
-
-      <div className="card-elevated p-4 space-y-2 text-sm">
-        <Row label="Participant ID" value={participantId} />
-        <Row label="Session" value={String(sessionNumber)} />
-        <Row label="Profile" value={result.profileCell.replace('_', ' / ')} />
-        <Row label="Norm version" value="1.0 (ASSUMED)" />
-      </div>
-
-      <div className="card-elevated p-4 space-y-2 text-sm">
-        <p className="text-display text-xs text-primary">RECALL</p>
-        <Row label="Raw score" value={`${recallRaw} / 100`} />
-        <Row label="Benchmark (80th)" value={String(result.benchmarks.recall)} />
-        <Row label="Est. percentile" value={`${result.recallPercentile.toFixed(1)}th`} />
-        <Row label="BFS component" value={String(result.recallBFS)} />
-        {fluencyScore != null && (
-          <div className="pt-1 border-t mt-1">
-            <Row label="Fluency (research)" value={`${fluencyScore} items`} />
-            <p className="text-xs text-muted-foreground italic">Research data — not included in BFS calculation</p>
-          </div>
-        )}
-      </div>
-
-      <div className="card-elevated p-4 space-y-2 text-sm">
-        <p className="text-display text-xs text-primary">LOCK-IN</p>
-        <Row label="Raw score" value={`${lockinRaw} / 100`} />
-        <Row label="Benchmark (80th)" value={String(result.benchmarks.lockin)} />
-        <Row label="Est. percentile" value={`${result.lockinPercentile.toFixed(1)}th`} />
-        <Row label="BFS component" value={String(result.lockinBFS)} />
-      </div>
-
-      <div className="card-elevated p-4 space-y-2 text-sm">
-        <p className="text-display text-xs text-primary">SHARPNESS</p>
-        <Row label="Raw score" value={`${sharpnessRaw} / 100`} />
-        <Row label="Benchmark (80th)" value={String(result.benchmarks.sharpness)} />
-        <Row label="Est. percentile" value={`${result.sharpnessPercentile.toFixed(1)}th`} />
-        <Row label="BFS component" value={String(result.sharpnessBFS)} />
-      </div>
-
-      <div className="card-elevated p-5 text-center space-y-2 border-2 border-primary/20">
-        <p className="text-display text-xs text-muted-foreground">COMPOSITE BFS</p>
-        <p className="text-display text-4xl text-foreground">{result.bfsComposite}<span className="text-xl text-muted-foreground"> / 100</span></p>
-        <div className="flex justify-center gap-6 text-sm">
-          <span className="text-muted-foreground">Target: <strong className="text-foreground">{result.bfsTarget}</strong></span>
-          <span className="text-muted-foreground">Gap: <strong className={result.bfsGap < 0 ? 'text-destructive' : 'text-success'}>{result.bfsGap > 0 ? '+' : ''}{result.bfsGap}</strong></span>
-        </div>
-      </div>
-
-      <div className="card-sunken p-4 space-y-2">
-        <p className="text-xs text-muted-foreground">SAY TO PARTICIPANT:</p>
-        <p className="text-base font-medium text-foreground italic">
-          {getFacilitatorScript(result.bfsComposite, result.bfsGap)}
-        </p>
-      </div>
-
-      <div className="flex gap-3">
-        <Button variant="hero" size="xl" className="flex-1" onClick={onSave}>
-          <Save className="w-5 h-5 mr-2" /> Save Session
-        </Button>
-        <Button variant="outline" size="xl" className="flex-1">
-          <Download className="w-5 h-5 mr-2" /> Export Scorecard
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
-
-// === Saved screen ===
-function SavedScreen({ result, participantId, sessionNumber, onNewSession }: {
-  result: BFSResult;
-  participantId: string;
-  sessionNumber: number;
-  onNewSession: () => void;
-}) {
-  const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const script = getFacilitatorScript(result, recallRaw, lockinRaw, sharpnessRaw);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-      <div className="text-center space-y-3">
-        <CheckCircle2 className="w-16 h-16 text-success mx-auto" />
-        <h2 className="text-display text-2xl text-foreground">SESSION {sessionNumber} SAVED</h2>
+      <div className="text-center">
+        <p className="text-display text-sm text-primary">FACILITATOR OUTPUT</p>
+        <p className="text-sm text-muted-foreground">{participantId} • Session {sessionNumber}</p>
       </div>
 
-      <div className="card-elevated p-6 space-y-3 text-sm">
-        <Row label="Participant ID" value={participantId} />
-        <Row label="Session" value={String(sessionNumber)} />
-        <Row label="BFS" value={`${result.bfsComposite} / 100`} />
-        <Row label="Saved" value={todayStr} />
+      <div className="card-elevated p-6 space-y-4">
+        <h3 className="text-display text-base text-foreground">DETAILED BREAKDOWN</h3>
+        <InfoRow label="Recall Raw" value={String(recallRaw)} />
+        <InfoRow label="Lock-In Raw" value={String(lockinRaw)} />
+        <InfoRow label="Sharpness Raw" value={String(sharpnessRaw)} />
+        {fluencyScore != null && <InfoRow label="Fluency" value={String(fluencyScore)} />}
+        <div className="border-t pt-2">
+          <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
+          <InfoRow label="Target" value={String(result.bfsTarget)} />
+          <InfoRow label="Gap" value={`${result.bfsGap > 0 ? '+' : ''}${result.bfsGap}`} />
+        </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" size="xl" className="flex-1">
-          <Download className="w-5 h-5 mr-2" /> Export Scorecard PDF
-        </Button>
-        <Button variant="hero" size="xl" className="flex-1" onClick={onNewSession}>
-          Back to Scoring
-        </Button>
+      <div className="card-sunken p-5 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Facilitator Script</p>
+        <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{script}</p>
       </div>
+
+      <Button variant="hero" size="xl" className="w-full gap-2" onClick={onSave}>
+        <Save className="w-5 h-5" /> Save & Complete
+      </Button>
     </motion.div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function SavedScreen({ result, participantId, sessionNumber, onNewSession }: {
+  result: BFSResult; participantId: string; sessionNumber: number; onNewSession: () => void;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 text-center">
+      <CheckCircle2 className="w-16 h-16 text-success mx-auto" />
+      <h2 className="text-display text-2xl text-foreground">Session Complete</h2>
+      <p className="text-muted-foreground">{participantId} — Session {sessionNumber}</p>
+      <div className="card-elevated p-6">
+        <p className="text-sm text-muted-foreground">BFS Composite</p>
+        <p className="text-display text-4xl text-primary">{result.bfsComposite}</p>
+      </div>
+      <Button variant="outline" size="xl" className="w-full" onClick={onNewSession}>Back to Scoring</Button>
+    </motion.div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
       <span className="font-medium text-foreground">{value}</span>
     </div>
   );
 }
 
 function formatOccupationLabel(type: string): string {
-  const map: Record<string, string> = {
-    'knowledge-worker': 'Knowledge Worker', 'creative': 'Creative',
-    'student': 'Student', 'blue-collar': 'Blue Collar', 'unemployed': 'Unemployed',
-  };
+  const map: Record<string, string> = { 'knowledge-worker': 'Knowledge Worker', 'creative': 'Creative', 'student': 'Student', 'blue-collar': 'Blue Collar', 'unemployed': 'Unemployed' };
   return map[type] || type;
 }
 
 function formatSeniorityLabel(level: string): string {
-  const map: Record<string, string> = {
-    'entry': 'Entry', 'mid': 'Mid', 'senior': 'Senior',
-    'executive': 'Executive', 'not-applicable': 'N/A',
-  };
+  const map: Record<string, string> = { 'entry': 'Entry', 'mid': 'Mid', 'senior': 'Senior', 'executive': 'Executive', 'not-applicable': 'N/A' };
   return map[level] || level;
 }
 
 function formatEducationLabel(level: string): string {
-  const map: Record<string, string> = {
-    'high-school': 'High School', 'some-college': 'Some College',
-    'bachelors': "Bachelor's", 'masters': "Master's",
-    'doctorate': 'Doctorate', 'other': 'Other',
-  };
+  const map: Record<string, string> = { 'high-school': 'High School', 'some-college': 'Some College', 'bachelors': "Bachelor's", 'masters': "Master's", 'doctorate': 'Doctorate', 'other': 'Other' };
   return map[level] || level;
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
 import { saveSession, generateSessionId, saveParticipant, savePillarScore } from '@/lib/storage';
 import { motion } from 'framer-motion';
-import { Check, X, Edit3, Save, FileDown, ArrowRight } from 'lucide-react';
+import { Check, X, Edit3, Save, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORY_ORDER: UnitCategory[] = ['WHO', 'WHAT', 'WHERE', 'WHEN', 'SPECIFIC'];
@@ -17,6 +17,7 @@ export default function SessionComplete() {
   const { participant, participantType, facilitator, location, assignedForm, isPractice, sessionStartTime, currentSessionNumber } = useSession();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const passage = PASSAGE_FORMS[assignedForm];
   const task = DISTRACTION_TASKS[assignedForm];
   const units = passage.scoreable_units;
@@ -40,9 +41,11 @@ export default function SessionComplete() {
 
   const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
 
-  const handleSave = () => {
-    if (!participant) return;
-    const sessionId = generateSessionId();
+  const handleSave = async () => {
+    if (!participant || saving) return;
+    setSaving(true);
+
+    const sessionId = await generateSessionId();
     const now = new Date().toISOString();
     const session: SessionRecord = {
       session_id: sessionId,
@@ -78,12 +81,13 @@ export default function SessionComplete() {
         sync_status: 'local_only',
       },
     };
-    saveSession(session);
-    savePillarScore(participant.participant_id, currentSessionNumber, {
+
+    await saveSession(session);
+    await savePillarScore(participant.participant_id, currentSessionNumber, {
       recall_raw: pillarScore,
       recall_fluency: state.distractionValidCount,
     });
-    // Update participant metadata (don't increment session_count — that's set at session start)
+
     const updatedP = { ...participant };
     if (currentSessionNumber > updatedP.session_count) {
       updatedP.session_count = currentSessionNumber;
@@ -93,8 +97,9 @@ export default function SessionComplete() {
     if (!updatedP.sessions.includes(sessionId)) {
       updatedP.sessions = [...updatedP.sessions, sessionId];
     }
-    saveParticipant(updatedP);
+    await saveParticipant(updatedP);
     setSaved(true);
+    setSaving(false);
   };
 
   const handleBackToHub = () => {
@@ -161,8 +166,8 @@ export default function SessionComplete() {
         <div className="flex gap-3">
           {!saved ? (
             <>
-              <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleSave}>
-                <Save className="w-5 h-5" /> Save Session
+              <Button variant="hero" size="xl" className="flex-1 gap-2" onClick={handleSave} disabled={saving}>
+                <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Session'}
               </Button>
               <Button variant="outline" size="xl" className="gap-2" onClick={handleEditScore}>
                 <Edit3 className="w-5 h-5" /> Edit Score
