@@ -379,9 +379,31 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
             <div key={s.number} className={`card-elevated p-4 space-y-2 ${!s.complete && (s.recall || s.lockin || s.sharpness) ? 'border-warning/40' : ''}`}>
               <div className="flex items-center justify-between">
                 <span className="text-display text-base text-foreground">Session {s.number}</span>
-                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${s.complete ? 'bg-success/10 text-success' : (s.recall || s.lockin || s.sharpness) ? 'bg-warning/10 text-warning' : 'bg-muted text-muted-foreground'}`}>
-                  {s.complete ? 'Completed' : (s.recall || s.lockin || s.sharpness) ? 'Incomplete' : 'Not started'}
-                </span>
+                <div className="flex items-center gap-2">
+                  {s.complete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1 text-primary"
+                      onClick={async () => {
+                        const scores = allScores.find(sc => sc.session_number === s.number);
+                        if (!scores || scores.recall_raw == null || scores.lockin_raw == null || scores.sharpness_raw == null) return;
+                        const ageBand = participant.demographics?.age_band as AgeBand;
+                        const demandProfile = participant.demographics?.demand_profile as DemandProfile;
+                        if (!ageBand || !demandProfile) return;
+                        const result = computeBFS(scores.recall_raw, scores.lockin_raw, scores.sharpness_raw, demandProfile, ageBand);
+                        if (!result) return;
+                        const sessionData = await getSessionByParticipant(participant.participant_id, s.number);
+                        generateScorePDF(result, s.number, participant.participant_id, allScores, ageBand, demandProfile, sessionData, scores.recall_raw, scores.lockin_raw, scores.sharpness_raw);
+                      }}
+                    >
+                      <FileDown className="w-3.5 h-3.5" /> PDF
+                    </Button>
+                  )}
+                  <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${s.complete ? 'bg-success/10 text-success' : (s.recall || s.lockin || s.sharpness) ? 'bg-warning/10 text-warning' : 'bg-muted text-muted-foreground'}`}>
+                    {s.complete ? 'Completed' : (s.recall || s.lockin || s.sharpness) ? 'Incomplete' : 'Not started'}
+                  </span>
+                </div>
               </div>
               <div className="flex gap-3 text-xs">
                 <span className="flex items-center gap-1">
