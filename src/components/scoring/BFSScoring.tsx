@@ -1004,6 +1004,27 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.text(msgLines, margin, y);
   y += msgLines.length * 5 + 10;
 
+  // Facilitator Script
+  checkPage(20);
+  doc.setDrawColor(200);
+  doc.line(margin, y, w - margin, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30);
+  doc.text('FACILITATOR SCRIPT', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const script = getFacilitatorScript(result.bfsComposite, result.bfsGap);
+  const scriptLines = doc.splitTextToSize(script, w - margin * 2);
+  for (const sl of scriptLines) {
+    checkPage(5);
+    doc.text(sl, margin, y);
+    y += 4.5;
+  }
+  y += 6;
+
   // RAW PERFORMANCE DATA
   const rd = sessionData?.recall_test_data;
   const ld = sessionData?.lockin_test_data;
