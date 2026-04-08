@@ -13,11 +13,11 @@ export default function LockInPractice() {
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [showDigit, setShowDigit] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(10);
   const [wrongFlash, setWrongFlash] = useState(false);
   const [started, setStarted] = useState(false);
   
-  const sequenceRef = useRef(generateSequence(26, 0.10, 1)); // ~26 stimuli for 30s
+  const sequenceRef = useRef(generateSequence(9, 0.10, 1)); // ~9 stimuli for 10s
   const indexRef = useRef(0);
   const stimulusOnsetRef = useRef(0);
   const tappedRef = useRef(false);
