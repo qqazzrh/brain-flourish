@@ -343,7 +343,7 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
     sessions.push({ number: i, complete: recall && lockin && sharpness, recall, lockin, sharpness });
   }
 
-  const latestIncomplete = sessions.find(s => !s.complete);
+  const incompleteSessions = sessions.filter(s => !s.complete);
   const nextNewSession = totalSessions + 1;
 
   if (!loaded) {
