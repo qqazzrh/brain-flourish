@@ -32,20 +32,44 @@ export default function LockInScoreOutput() {
     if (saving) return;
     setSaving(true);
 
-    if (participant) {
+    try {
+      if (!participant) {
+        toast.error('No participant session found. Please start a session from the hub.');
+        return;
+      }
+
       await savePillarScore(participant.participant_id, currentSessionNumber, {
         lockin_raw: scores.pillarScore,
         lockin_degradation_index: degradationIndex,
       });
+
+      // Update session record to mark lockin as done
+      const sessionId = `${participant.participant_id}-S${currentSessionNumber}`;
+      await saveSession({
+        session_id: sessionId,
+        participant_id: participant.participant_id,
+        session_number: currentSessionNumber,
+        timestamp_start: state.testStartTime || new Date().toISOString(),
+        timestamp_end: state.testEndTime || new Date().toISOString(),
+        lockin_done: true,
+        practice: isPractice,
+      });
+
       const updatedP = { ...participant };
       if (currentSessionNumber > updatedP.session_count) {
         updatedP.session_count = currentSessionNumber;
       }
       updatedP.last_session_date = new Date().toISOString().split('T')[0];
       await saveParticipant(updatedP);
+
+      setSaved(true);
+      toast.success('Lock-In session saved successfully');
+    } catch (err) {
+      console.error('Lock-In save error:', err);
+      toast.error('Failed to save session. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setSaved(true);
-    setSaving(false);
   };
 
   const handleNextOrHub = () => { resetLockIn(); navigate('/'); };
