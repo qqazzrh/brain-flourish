@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 
-type Screen = 'input' | 'participant_result' | 'facilitator_output' | 'saved';
+type Screen = 'input' | 'participant_result' | 'saved';
 
 const AGE_BANDS: AgeBand[] = ['18-24', '25-29', '30-34', '35-44', '45-54'];
 const DEMAND_PROFILES: DemandProfile[] = ['HIGH', 'MODERATE', 'LOWER'];
