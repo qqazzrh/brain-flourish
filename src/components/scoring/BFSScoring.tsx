@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { computeBFS, getBFSMessage, getFacilitatorScript, BFSResult } from '@/lib/bfs-scoring';
 import { getPillarScores, getAllPillarScoresForParticipant, PillarScores, getSessionByParticipant } from '@/lib/storage';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown, Share2, ChevronDown, ChevronUp, Image } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 type Screen = 'input' | 'participant_result' | 'facilitator_output' | 'saved';
