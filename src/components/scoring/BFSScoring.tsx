@@ -198,7 +198,7 @@ export default function BFSScoring() {
               </div>
             </div>
 
-            <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>Calculate BFS</Button>
+            <Button variant="hero" size="xl" className="w-full" disabled={!canCalculate} onClick={handleCalculate}>Calculate Brain Score</Button>
           </motion.div>
         )}
 
@@ -457,7 +457,7 @@ async function exportScoreCardPNG(
   ctx.fillStyle = '#f8fafc';
   ctx.font = 'bold 48px "Space Grotesk", system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('BRAIN FITNESS SCORE', w / 2, 80);
+  ctx.fillText('BRAIN SCORE', w / 2, 80);
 
   ctx.font = '24px "IBM Plex Sans", system-ui, sans-serif';
   ctx.fillStyle = '#94a3b8';
@@ -487,7 +487,7 @@ async function exportScoreCardPNG(
 
   ctx.font = '28px "IBM Plex Sans", system-ui, sans-serif';
   ctx.fillStyle = '#64748b';
-  ctx.fillText('BFS COMPOSITE  /  100', w / 2, compositeY + 40);
+  ctx.fillText('BRAIN SCORE  /  100', w / 2, compositeY + 40);
 
   ctx.font = '22px "IBM Plex Sans", system-ui, sans-serif';
   const gapColor = result.bfsGap >= 0 ? '#10b981' : '#ef4444';
@@ -561,13 +561,13 @@ async function exportScoreCardPNG(
   // Footer
   ctx.font = '16px "IBM Plex Sans", system-ui, sans-serif';
   ctx.fillStyle = '#475569'; ctx.textAlign = 'center';
-  ctx.fillText('Reclaim Your Brain  |  Brain Fitness Score v2.0  |  reclaimyourbrain.com', w / 2, h - 40);
+  ctx.fillText('Reclaim Your Brain  |  Brain Score v2.0  |  reclaimyourbrain.com', w / 2, h - 40);
 
   // Download
   const dataUrl = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = `${participantId}_BFS_Session${sessionNumber}.png`;
+  a.download = `${participantId}_BrainScore_Session${sessionNumber}.png`;
   a.click();
 }
 
@@ -770,7 +770,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
   const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
 
   const handleExportCSV = () => {
-    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
+    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'Brain Score'];
     const rows = allScores.map(s => {
       const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
       let bfs = '';
@@ -794,7 +794,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
       <div className="text-center">
         <p className="text-sm text-muted-foreground mb-1">Session {sessionNumber}</p>
-        <h2 className="text-display text-2xl text-foreground">YOUR BRAIN FITNESS SCORE</h2>
+        <h2 className="text-display text-2xl text-foreground">YOUR BRAIN SCORE</h2>
       </div>
 
       {/* Composite Score - Hero with threshold bar */}
@@ -905,7 +905,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
         <InfoRow label="Lock-In" value={`${lockinRaw} / 100`} />
         <InfoRow label="Sharpness" value={`${sharpnessRaw} / 100`} />
         <div className="border-t pt-2">
-          <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
+          <InfoRow label="Brain Score" value={`${result.bfsComposite} / 100`} />
           <InfoRow label="Minimum" value={String(result.bfsTarget)} />
           <InfoRow label="Gap" value={`${result.bfsGap > 0 ? '+' : ''}${result.bfsGap}`} />
         </div>
@@ -972,7 +972,7 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('BRAIN FITNESS SCORE REPORT', w / 2, y, { align: 'center' });
+  doc.text('BRAIN SCORE REPORT', w / 2, y, { align: 'center' });
   y += 10;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -1019,14 +1019,37 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.line(margin, y, w - margin, y);
   y += 10;
 
+  // Brain Score composite bar
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('BFS COMPOSITE', margin, y);
-  doc.setFontSize(28);
-  doc.text(`${result.bfsComposite}`, w - margin, y, { align: 'right' });
-  y += 10;
+  doc.text('BRAIN SCORE', margin, y);
+  y += 8;
+
+  const compBarW = w - margin * 2 - 50;
+  doc.setFillColor(230, 230, 230);
+  doc.roundedRect(margin, y, compBarW, 10, 2, 2, 'F');
+  const compFillW = Math.min(result.bfsComposite / 100, 1) * compBarW;
+  const compColor = result.bfsComposite >= 75 ? [16, 185, 129] : [239, 68, 68];
+  doc.setFillColor(compColor[0], compColor[1], compColor[2]);
+  doc.roundedRect(margin, y, compFillW, 10, 2, 2, 'F');
+  const compThreshX = margin + (75 / 100) * compBarW;
+  doc.setDrawColor(34, 197, 94);
+  doc.setLineWidth(0.5);
+  doc.line(compThreshX, y - 1, compThreshX, y + 11);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(34, 197, 94);
+  doc.text('MIN 75', compThreshX, y - 3, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30);
+  doc.text('BRAIN SCORE', margin + compBarW + 4, y + 8);
+  doc.text(String(result.bfsComposite), w - margin, y + 8, { align: 'right' });
+  y += 16;
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100);
   doc.text(`Minimum: ${result.bfsTarget}  |  Gap: ${result.bfsGap > 0 ? '+' : ''}${result.bfsGap} points`, margin, y);
   y += 12;
 
@@ -1229,7 +1252,7 @@ function SavedScreen({ result, participantId, sessionNumber, onNewSession }: {
       <h2 className="text-display text-2xl text-foreground">Session Complete</h2>
       <p className="text-muted-foreground">{participantId} — Session {sessionNumber}</p>
       <div className="card-elevated p-6">
-        <p className="text-sm text-muted-foreground">BFS Composite</p>
+        <p className="text-sm text-muted-foreground">Brain Score</p>
         <p className="text-display text-4xl text-primary">{result.bfsComposite}</p>
       </div>
       <Button variant="outline" size="xl" className="w-full" onClick={onNewSession}>Back to Scoring</Button>
