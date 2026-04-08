@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 type Screen = 'input' | 'participant_result' | 'facilitator_output' | 'saved';
 
