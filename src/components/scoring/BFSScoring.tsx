@@ -243,29 +243,30 @@ function ScoreBar({ label, score, target, color }: { label: string; score: numbe
           <span className="text-sm text-muted-foreground">/ 100</span>
         </div>
       </div>
-      <div ref={barRef} className="h-8 bg-muted rounded-lg overflow-hidden relative">
-        {/* Score fill */}
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${scorePct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full rounded-lg ${color}`}
-        />
-        {/* Remaining capacity (gray) */}
-        <div className="absolute top-0 right-0 h-full bg-muted" style={{ width: `${100 - scorePct}%` }} />
-        {/* Target line */}
-        <div
-          className="absolute top-0 h-full w-[3px] bg-success z-10"
-          style={{ left: `${targetPct}%` }}
-        >
-          <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-success whitespace-nowrap">
-            {target}
+      <div ref={barRef} className="relative pt-5">
+        <div className="h-8 bg-muted rounded-lg overflow-hidden relative">
+          {/* Score fill */}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${scorePct}%` }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className={`h-full rounded-lg ${color}`}
+          />
+          {/* Target line with label */}
+          <div
+            className="absolute top-0 h-full w-[3px] bg-success z-10"
+            style={{ left: `${targetPct}%` }}
+          >
+            <div className="absolute -top-5 left-1/2 -translate-x-1/2 flex flex-col items-center">
+              <span className="text-[10px] font-bold text-success whitespace-nowrap">MIN {target}</span>
+              <span className="w-0 h-0 border-l-[4px] border-r-[4px] border-t-[4px] border-l-transparent border-r-transparent border-t-success" />
+            </div>
           </div>
         </div>
       </div>
       {!isAbove && (
-        <p className="text-xs text-destructive font-medium">
-          {target - score} points below minimum threshold
+        <p className="text-xs text-destructive font-medium mt-1">
+          ⚠ {target - score} points below minimum threshold
         </p>
       )}
     </div>
@@ -796,8 +797,8 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
         <h2 className="text-display text-2xl text-foreground">YOUR BRAIN FITNESS SCORE</h2>
       </div>
 
-      {/* Composite Score - Hero */}
-      <div className="card-elevated p-8 text-center space-y-3">
+      {/* Composite Score - Hero with threshold bar */}
+      <div className="card-elevated p-8 text-center space-y-4">
         <motion.p
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -807,22 +808,57 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
           {result.bfsComposite}
         </motion.p>
         <p className="text-muted-foreground text-lg">out of 100</p>
-        <div className="flex justify-center gap-6 pt-2">
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Minimum</p>
-            <p className="text-display text-lg text-success">{result.bfsTarget}</p>
+
+        {/* Visual threshold bar */}
+        <div className="relative pt-6 pb-2">
+          <div className="h-10 bg-muted rounded-lg overflow-hidden relative">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(result.bfsComposite, 100)}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              className={`h-full rounded-lg ${result.bfsComposite >= 75 ? 'bg-success' : 'bg-destructive'}`}
+            />
+            {/* Minimum threshold marker */}
+            <div
+              className="absolute top-0 h-full w-[3px] bg-success z-10"
+              style={{ left: '75%' }}
+            >
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                <span className="text-[11px] font-bold text-success whitespace-nowrap">MIN 75</span>
+                <span className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-success" />
+              </div>
+            </div>
           </div>
+          <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+            <span>0</span>
+            <span>25</span>
+            <span>50</span>
+            <span>75</span>
+            <span>100</span>
+          </div>
+        </div>
+
+        <div className="flex justify-center gap-8 pt-1">
           <div className="text-center">
+            <p className="text-xs text-muted-foreground">Your Score</p>
+            <p className={`text-display text-xl ${result.bfsComposite >= 75 ? 'text-success' : 'text-destructive'}`}>{result.bfsComposite}</p>
+          </div>
+          <div className="text-center border-l border-border pl-8">
+            <p className="text-xs text-muted-foreground">Minimum Threshold</p>
+            <p className="text-display text-xl text-success">{result.bfsTarget}</p>
+          </div>
+          <div className="text-center border-l border-border pl-8">
             <p className="text-xs text-muted-foreground">Gap</p>
-            <p className={`text-display text-lg ${result.bfsGap < 0 ? 'text-destructive' : 'text-success'}`}>
+            <p className={`text-display text-xl ${result.bfsGap < 0 ? 'text-destructive' : 'text-success'}`}>
               {result.bfsGap > 0 ? '+' : ''}{result.bfsGap}
             </p>
           </div>
         </div>
+
         {result.bfsComposite < 75 && (
-          <div className="bg-destructive/10 rounded-lg px-4 py-2 mt-3">
-            <p className="text-sm text-destructive font-medium">
-              {Math.abs(result.bfsGap)}-point gap — this is why you're here
+          <div className="bg-destructive/10 rounded-lg px-4 py-3 mt-2">
+            <p className="text-sm text-destructive font-semibold">
+              ⚠ {Math.abs(result.bfsGap)}-point gap below minimum threshold — this is why you're here
             </p>
           </div>
         )}
