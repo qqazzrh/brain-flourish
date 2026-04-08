@@ -146,19 +146,19 @@ export default function LockInActiveTest() {
 
   return (
     <div 
-      className={`min-h-screen flex flex-col bg-background select-none transition-colors duration-100 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : tapFlash ? 'bg-muted' : ''}`}
+      className={`h-[100dvh] flex flex-col bg-background select-none transition-colors duration-100 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : tapFlash ? 'bg-muted' : ''}`}
       onClick={handleTap}
     >
       {/* Timer - top right, small */}
       <div className="px-6 py-3 flex justify-end">
-        <span className="text-sm font-mono text-muted-foreground">
+        <span className="text-sm md:text-base font-mono text-muted-foreground">
           {mins}:{String(secs).padStart(2, '0')} remaining
         </span>
       </div>
 
       {/* Stimulus area */}
       <div className="flex-1 flex items-center justify-center">
-        <div className="h-40 flex items-center justify-center">
+        <div className="h-40 md:h-56 flex items-center justify-center">
           <AnimatePresence>
             {showDigit && currentDigit !== null && (
               <motion.span
@@ -166,7 +166,7 @@ export default function LockInActiveTest() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.03 }}
-                className="text-display text-[120px] text-foreground"
+                className="text-display text-[120px] md:text-[180px] text-foreground"
               >
                 {currentDigit}
               </motion.span>
@@ -175,7 +175,7 @@ export default function LockInActiveTest() {
         </div>
       </div>
 
-      {/* Tap zone - unlabelled in active test */}
+      {/* Tap zone */}
       <div className={`h-[35vh] mx-6 mb-6 rounded-xl border transition-colors duration-150 ${wrongFlash ? 'border-red-500 bg-red-200/50 dark:bg-red-900/30' : 'border-border/20'}`} />
     </div>
   );

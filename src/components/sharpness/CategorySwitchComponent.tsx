@@ -241,14 +241,14 @@ export default function CategorySwitchComponent() {
       key={currentRule}
       initial={{ opacity: 0.7 }}
       animate={{ opacity: 1 }}
-      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
+      className={`h-[100dvh] flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
     >
       {/* Big rule banner */}
-      <div className={`${colors.bannerBg} px-6 py-4 text-center`}>
+      <div className={`${colors.bannerBg} px-6 py-4 md:py-5 text-center`}>
         <div className="flex items-center justify-center gap-3">
-          <span className="text-white text-2xl font-black tracking-wider">{RULE_LABELS[currentRule]}</span>
+          <span className="text-white text-2xl md:text-3xl font-black tracking-wider">{RULE_LABELS[currentRule]}</span>
         </div>
-        <p className="text-white/80 text-sm font-medium">{RULE_DESCRIPTIONS[currentRule]}</p>
+        <p className="text-white/80 text-sm md:text-base font-medium">{RULE_DESCRIPTIONS[currentRule]}</p>
       </div>
 
       <div className={`px-6 py-2 flex items-center justify-between border-b ${colors.border}`}>
@@ -257,7 +257,7 @@ export default function CategorySwitchComponent() {
           <p className="text-xs text-muted-foreground">Trial {trialIndex + 1} • {3 - trialInBlock} left on this rule</p>
         </div>
         <div className="text-right">
-          <span className="text-sm font-mono text-muted-foreground">
+          <span className="text-sm md:text-base font-mono text-muted-foreground">
             {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
           </span>
         </div>
@@ -268,7 +268,7 @@ export default function CategorySwitchComponent() {
           key={`${phase}-${trialIndex}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-display text-[48px] text-foreground"
+          className="text-display text-[48px] md:text-[64px] text-foreground"
         >
           {currentTrial.word}
         </motion.span>
@@ -284,14 +284,14 @@ export default function CategorySwitchComponent() {
         )}
       </div>
 
-      <div className="px-6 pb-8 flex gap-3">
+      <div className="px-6 pb-8 flex gap-3 md:gap-5">
         {shuffledOptions.map(option => (
           <button
             key={option}
             onClick={() => handleOptionTap(option)}
-            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongOption === option ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
+            className={`flex-1 min-h-[80px] md:min-h-[100px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongOption === option ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
-            <span className="text-display text-base text-foreground">{option}</span>
+            <span className="text-display text-base md:text-lg text-foreground">{option}</span>
           </button>
         ))}
       </div>
