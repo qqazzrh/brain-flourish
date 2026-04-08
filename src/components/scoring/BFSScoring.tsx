@@ -313,7 +313,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, dem
 
       <div className="card-sunken p-5 space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">Message</p>
-        <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsComposite, result.bfsTarget)}</p>
+        <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsStatus)}</p>
       </div>
 
       <Button variant="hero" size="xl" className="w-full" onClick={onContinue}>View Facilitator Output</Button>
@@ -339,7 +339,6 @@ function PillarBar({ label, score, target }: { label: string; score: number; tar
 function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluencyScore, participantId, sessionNumber, onSave }: {
   result: BFSResult; recallRaw: number; lockinRaw: number; sharpnessRaw: number; fluencyScore?: number; participantId: string; sessionNumber: number; onSave: () => void;
 }) {
-  const script = getFacilitatorScript(result, recallRaw, lockinRaw, sharpnessRaw);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -363,7 +362,7 @@ function FacilitatorDisplay({ result, recallRaw, lockinRaw, sharpnessRaw, fluenc
 
       <div className="card-sunken p-5 space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">Facilitator Script</p>
-        <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{script}</p>
+        <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{getFacilitatorScript(result.bfsComposite, result.bfsGap)}</p>
       </div>
 
       <Button variant="hero" size="xl" className="w-full gap-2" onClick={onSave}>
