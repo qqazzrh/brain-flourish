@@ -90,13 +90,14 @@ export async function savePillarScore(participantId: string, sessionNumber: numb
     .maybeSingle();
 
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('pillar_scores')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('participant_id', participantId)
       .eq('session_number', sessionNumber);
+    if (error) console.error('savePillarScore update error:', error);
   } else {
-    await supabase.from('pillar_scores').insert({
+    const { error } = await supabase.from('pillar_scores').insert({
       participant_id: participantId,
       session_number: sessionNumber,
       recall_raw: null,
@@ -108,6 +109,7 @@ export async function savePillarScore(participantId: string, sessionNumber: numb
       sharpness_rt_switch_cost_ms: null,
       ...updates,
     });
+    if (error) console.error('savePillarScore insert error:', error);
   }
 }
 
@@ -134,9 +136,11 @@ export async function saveParticipant(p: ParticipantRecord) {
 
   const row = participantToDb(p);
   if (existing) {
-    await supabase.from('participants').update(row).eq('participant_id', p.participant_id);
+    const { error } = await supabase.from('participants').update(row).eq('participant_id', p.participant_id);
+    if (error) console.error('saveParticipant update error:', error);
   } else {
-    await supabase.from('participants').insert(row);
+    const { error } = await supabase.from('participants').insert(row);
+    if (error) console.error('saveParticipant insert error:', error);
   }
 }
 
@@ -197,9 +201,11 @@ export async function saveSession(session: any) {
   };
 
   if (existing) {
-    await supabase.from('sessions').update(row).eq('session_id', session.session_id);
+    const { error } = await supabase.from('sessions').update(row).eq('session_id', session.session_id);
+    if (error) console.error('saveSession update error:', error);
   } else {
-    await supabase.from('sessions').insert(row);
+    const { error } = await supabase.from('sessions').insert(row);
+    if (error) console.error('saveSession insert error:', error);
   }
 }
 
