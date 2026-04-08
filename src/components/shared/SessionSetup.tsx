@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant, getAllPillarScoresForParticipant, getPillarScores, PillarScores } from '@/lib/storage';
+import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant, getAllPillarScoresForParticipant, PillarScores } from '@/lib/storage';
 import {
   ParticipantRecord, ParticipantDemographics,
   AgeBand, Gender, EducationLevel, OccupationType, SeniorityLevel, DemandProfile,
@@ -399,7 +399,7 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
       <div className="space-y-3">
         {latestIncomplete && (
           <Button variant="hero" size="xl" className="w-full gap-2" onClick={() => onContinue(latestIncomplete.number)}>
-            <Play className="w-5 h-5" /> Continue Session {latestIncomplete.number}
+            <Play className="w-5 h-5" /> {latestIncomplete.recall || latestIncomplete.lockin || latestIncomplete.sharpness ? 'Continue' : 'Start'} Session {latestIncomplete.number}
           </Button>
         )}
         <Button variant={latestIncomplete ? 'outline' : 'hero'} size="xl" className="w-full gap-2" onClick={() => onStartNew(nextNewSession)}>
