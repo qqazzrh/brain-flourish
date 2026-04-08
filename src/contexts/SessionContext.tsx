@@ -1,5 +1,54 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { Facilitator, ParticipantRecord, ParticipantType, FormId } from '@/lib/types';
+
+const SESSION_STORAGE_KEY = 'bfs-active-session';
+
+interface PersistedSessionState {
+  facilitator: Facilitator | null;
+  location: string;
+  participant: ParticipantRecord | null;
+  participantType: ParticipantType;
+  assignedForm: FormId;
+  isPractice: boolean;
+  sessionStartTime: string | null;
+  currentSessionNumber: number;
+}
+
+const DEFAULT_SESSION_STATE: PersistedSessionState = {
+  facilitator: null,
+  location: '',
+  participant: null,
+  participantType: 'new',
+  assignedForm: 'A',
+  isPractice: false,
+  sessionStartTime: null,
+  currentSessionNumber: 1,
+};
+
+function readStoredSession(): PersistedSessionState {
+  if (typeof window === 'undefined') return DEFAULT_SESSION_STATE;
+
+  try {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return DEFAULT_SESSION_STATE;
+
+    const parsed = JSON.parse(raw) as Partial<PersistedSessionState>;
+    const assignedForm = parsed.assignedForm;
+
+    return {
+      facilitator: parsed.facilitator ?? null,
+      location: typeof parsed.location === 'string' ? parsed.location : '',
+      participant: parsed.participant ?? null,
+      participantType: parsed.participantType === 'returning' ? 'returning' : 'new',
+      assignedForm: assignedForm === 'A' || assignedForm === 'B' || assignedForm === 'C' || assignedForm === 'D' ? assignedForm : 'A',
+      isPractice: Boolean(parsed.isPractice),
+      sessionStartTime: typeof parsed.sessionStartTime === 'string' ? parsed.sessionStartTime : null,
+      currentSessionNumber: typeof parsed.currentSessionNumber === 'number' && parsed.currentSessionNumber > 0 ? parsed.currentSessionNumber : 1,
+    };
+  } catch {
+    return DEFAULT_SESSION_STATE;
+  }
+}
 
 interface SessionContextType {
   facilitator: Facilitator | null;
@@ -20,14 +69,36 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [facilitator, setFac] = useState<Facilitator | null>(null);
-  const [location, setLoc] = useState('');
-  const [participant, setPart] = useState<ParticipantRecord | null>(null);
-  const [participantType, setPartType] = useState<ParticipantType>('new');
-  const [assignedForm, setForm] = useState<FormId>('A');
-  const [isPractice, setIsPractice] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
-  const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
+  const persisted = useMemo(() => readStoredSession(), []);
+  const [facilitator, setFac] = useState<Facilitator | null>(persisted.facilitator);
+  const [location, setLoc] = useState(persisted.location);
+  const [participant, setPart] = useState<ParticipantRecord | null>(persisted.participant);
+  const [participantType, setPartType] = useState<ParticipantType>(persisted.participantType);
+  const [assignedForm, setForm] = useState<FormId>(persisted.assignedForm);
+  const [isPractice, setIsPractice] = useState(persisted.isPractice);
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(persisted.sessionStartTime);
+  const [currentSessionNumber, setCurrentSessionNumber] = useState(persisted.currentSessionNumber);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hasSessionState = Boolean(facilitator || participant || location || isPractice || sessionStartTime);
+    if (!hasSessionState) {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      facilitator,
+      location,
+      participant,
+      participantType,
+      assignedForm,
+      isPractice,
+      sessionStartTime,
+      currentSessionNumber,
+    } satisfies PersistedSessionState));
+  }, [facilitator, location, participant, participantType, assignedForm, isPractice, sessionStartTime, currentSessionNumber]);
 
   const setFacilitator = useCallback((f: Facilitator, loc: string) => {
     setFac(f);
