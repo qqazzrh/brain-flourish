@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Download, Save, CheckCircle2, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 type Screen = 'input' | 'participant_result' | 'facilitator_output' | 'saved';
 
@@ -328,6 +329,128 @@ function ScoreHistoryRow({ label, scores, field }: { label: string; scores: Pill
   );
 }
 
+function generateScorePDF(result: BFSResult, sessionNumber: number, participantId: string, allScores: PillarScores[], ageBand: AgeBand, demandProfile: DemandProfile) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const w = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  let y = 25;
+
+  // Title
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BRAIN FITNESS SCORE REPORT', w / 2, y, { align: 'center' });
+  y += 10;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Participant: ${participantId}  |  Session ${sessionNumber}  |  ${new Date().toLocaleDateString()}`, w / 2, y, { align: 'center' });
+  y += 12;
+
+  // Divider
+  doc.setDrawColor(200);
+  doc.line(margin, y, w - margin, y);
+  y += 10;
+
+  // Pillar scores
+  const pillars = [
+    { label: 'RECALL', score: result.recallBFS },
+    { label: 'LOCK-IN', score: result.lockinBFS },
+    { label: 'SHARPNESS', score: result.sharpnessBFS },
+  ];
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PILLAR SCORES', margin, y);
+  y += 8;
+
+  for (const p of pillars) {
+    // Bar background
+    const barW = w - margin * 2 - 50;
+    doc.setFillColor(230, 230, 230);
+    doc.roundedRect(margin, y, barW, 8, 2, 2, 'F');
+    // Bar fill
+    const fillW = Math.min(p.score / 100, 1) * barW;
+    doc.setFillColor(59, 130, 246);
+    doc.roundedRect(margin, y, fillW, 8, 2, 2, 'F');
+    // Label & score
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30);
+    doc.text(p.label, margin + barW + 4, y + 6);
+    doc.text(String(p.score), w - margin, y + 6, { align: 'right' });
+    y += 14;
+  }
+
+  y += 4;
+  doc.setDrawColor(200);
+  doc.line(margin, y, w - margin, y);
+  y += 10;
+
+  // BFS Composite
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BFS COMPOSITE', margin, y);
+  doc.setFontSize(28);
+  doc.text(`${result.bfsComposite}`, w - margin, y, { align: 'right' });
+  y += 10;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Target: ${result.bfsTarget}  |  Gap: ${result.bfsGap > 0 ? '+' : ''}${result.bfsGap} points`, margin, y);
+  y += 12;
+
+  // Message
+  doc.setDrawColor(200);
+  doc.line(margin, y, w - margin, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'italic');
+  const msg = getBFSMessage(result.bfsStatus);
+  const msgLines = doc.splitTextToSize(msg, w - margin * 2);
+  doc.text(msgLines, margin, y);
+  y += msgLines.length * 5 + 10;
+
+  // Score history table
+  if (allScores.length > 1) {
+    doc.setDrawColor(200);
+    doc.line(margin, y, w - margin, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SCORE HISTORY', margin, y);
+    y += 8;
+
+    // Table header
+    const cols = [margin, margin + 30, margin + 60, margin + 90, margin + 120];
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Session', cols[0], y);
+    doc.text('Recall', cols[1], y);
+    doc.text('Lock-In', cols[2], y);
+    doc.text('Sharpness', cols[3], y);
+    doc.text('BFS', cols[4], y);
+    y += 2;
+    doc.line(margin, y, w - margin, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    for (const s of allScores) {
+      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+      let bfs = '—';
+      if (complete) {
+        const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+        bfs = String(r?.bfsComposite || '—');
+      }
+      doc.text(`S${s.session_number}`, cols[0], y);
+      doc.text(s.recall_raw != null ? String(s.recall_raw) : '—', cols[1], y);
+      doc.text(s.lockin_raw != null ? String(s.lockin_raw) : '—', cols[2], y);
+      doc.text(s.sharpness_raw != null ? String(s.sharpness_raw) : '—', cols[3], y);
+      doc.text(bfs, cols[4], y);
+      y += 6;
+    }
+  }
+
+  doc.save(`${participantId}_session${sessionNumber}_BFS_report.pdf`);
+}
+
 function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, demandProfile, allScores, onContinue }: {
   result: BFSResult; sessionNumber: number; participantId: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; onContinue: () => void;
 }) {
@@ -385,7 +508,12 @@ function ParticipantDisplay({ result, sessionNumber, participantId, ageBand, dem
         <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsStatus)}</p>
       </div>
 
-      <Button variant="hero" size="xl" className="w-full" onClick={onContinue}>View Facilitator Output</Button>
+      <div className="flex gap-3">
+        <Button variant="outline" size="xl" className="flex-1 gap-2" onClick={() => generateScorePDF(result, sessionNumber, participantId, allScores, ageBand, demandProfile)}>
+          <FileDown className="w-5 h-5" /> Download PDF
+        </Button>
+        <Button variant="hero" size="xl" className="flex-1" onClick={onContinue}>View Facilitator Output</Button>
+      </div>
     </motion.div>
   );
 }
