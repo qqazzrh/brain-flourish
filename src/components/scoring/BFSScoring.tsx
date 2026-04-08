@@ -868,7 +868,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
           variant="outline"
           size="xl"
           className="gap-2"
-          onClick={() => generateScorePDF(result, sessionNumber, participantId, allScores, ageBand, demandProfile)}
+          onClick={() => generateScorePDF(result, sessionNumber, participantId, allScores, ageBand, demandProfile, sessionData, recallRaw, lockinRaw, sharpnessRaw)}
         >
           <FileDown className="w-5 h-5" /> PDF
         </Button>
