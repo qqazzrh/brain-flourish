@@ -771,8 +771,8 @@ function RawBreakdown({ sessionData, recallRaw, lockinRaw, sharpnessRaw }: {
 }
 
 /* ===== PARTICIPANT RESULT DISPLAY ===== */
-function ParticipantDisplay({ result, sessionNumber, participantId, participantName, ageBand, demandProfile, allScores, sessionData, recallRaw, lockinRaw, sharpnessRaw, onContinue }: {
-  result: BFSResult; sessionNumber: number; participantId: string; participantName: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; sessionData: any; recallRaw: number; lockinRaw: number; sharpnessRaw: number; onContinue: () => void;
+function ParticipantDisplay({ result, sessionNumber, participantId, participantName, ageBand, demandProfile, allScores, sessionData, recallRaw, lockinRaw, sharpnessRaw, onSave }: {
+  result: BFSResult; sessionNumber: number; participantId: string; participantName: string; ageBand: AgeBand; demandProfile: DemandProfile; allScores: PillarScores[]; sessionData: any; recallRaw: number; lockinRaw: number; sharpnessRaw: number; onSave: () => void;
 }) {
   const sessionBFS: { session: number; bfs: number }[] = allScores
     .filter(s => s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null)
@@ -783,6 +783,27 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
 
   const lastBFS = sessionBFS.length >= 2 ? sessionBFS[sessionBFS.length - 2].bfs : null;
   const movement = lastBFS != null ? result.bfsComposite - lastBFS : null;
+
+  const handleExportCSV = () => {
+    const headers = ['Session', 'Recall', 'Lock-In', 'Sharpness', 'BFS Composite'];
+    const rows = allScores.map(s => {
+      const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
+      let bfs = '';
+      if (complete) {
+        const r = computeBFS(s.recall_raw!, s.lockin_raw!, s.sharpness_raw!, demandProfile, ageBand);
+        bfs = String(r?.bfsComposite || '');
+      }
+      return [s.session_number, s.recall_raw ?? '', s.lockin_raw ?? '', s.sharpness_raw ?? '', bfs].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${participantId}_session_${sessionNumber}_report.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -823,7 +844,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
         )}
       </div>
 
-      {/* Pillar Bars - New Design */}
+      {/* Pillar Bars */}
       <div className="space-y-5">
         <ScoreBar label="RECALL" score={result.recallBFS} target={75} color="bg-info" />
         <ScoreBar label="LOCK-IN" score={result.lockinBFS} target={75} color="bg-[hsl(270,50%,55%)]" />
@@ -845,21 +866,40 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
         </div>
       )}
 
-      {/* Message */}
+      {/* Status Message */}
       <div className="card-sunken p-5 space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
         <p className="text-base text-foreground leading-relaxed">{getBFSMessage(result.bfsStatus)}</p>
+      </div>
+
+      {/* Facilitator Script */}
+      <div className="card-sunken p-5 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Facilitator Script</p>
+        <p className="text-base text-foreground leading-relaxed whitespace-pre-line">{getFacilitatorScript(result.bfsComposite, result.bfsGap)}</p>
+      </div>
+
+      {/* Session Scores Summary */}
+      <div className="card-elevated p-6 space-y-4">
+        <h3 className="text-display text-base text-foreground">SESSION {sessionNumber} SCORES</h3>
+        <InfoRow label="Recall" value={`${recallRaw} / 100`} />
+        <InfoRow label="Lock-In" value={`${lockinRaw} / 100`} />
+        <InfoRow label="Sharpness" value={`${sharpnessRaw} / 100`} />
+        <div className="border-t pt-2">
+          <InfoRow label="BFS Composite" value={`${result.bfsComposite} / 100`} />
+          <InfoRow label="Minimum" value={String(result.bfsTarget)} />
+          <InfoRow label="Gap" value={`${result.bfsGap > 0 ? '+' : ''}${result.bfsGap}`} />
+        </div>
       </div>
 
       {/* Raw Breakdown */}
       <RawBreakdown sessionData={sessionData} recallRaw={recallRaw} lockinRaw={lockinRaw} sharpnessRaw={sharpnessRaw} />
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Button
           variant="outline"
           size="xl"
-          className="flex-1 gap-2"
+          className="gap-2"
           onClick={() => exportScoreCardPNG(result, participantId, participantName, sessionNumber, sessionData, recallRaw, lockinRaw, sharpnessRaw)}
         >
           <Image className="w-5 h-5" /> Share PNG
@@ -872,7 +912,17 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
         >
           <FileDown className="w-5 h-5" /> PDF
         </Button>
-        <Button variant="hero" size="xl" className="flex-1" onClick={onContinue}>Facilitator View</Button>
+        <Button
+          variant="outline"
+          size="xl"
+          className="gap-2"
+          onClick={handleExportCSV}
+        >
+          <Download className="w-5 h-5" /> Export CSV
+        </Button>
+        <Button variant="hero" size="xl" className="gap-2" onClick={onSave}>
+          <Save className="w-5 h-5" /> Save & Complete
+        </Button>
       </div>
     </motion.div>
   );
