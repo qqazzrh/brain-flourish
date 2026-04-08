@@ -3,7 +3,6 @@ import { useSharpness, DualTaskResponseEntry } from '@/contexts/SharpnessContext
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Generate visual digit sequence
 function generateVisualSequence(count: number): number[] {
   const digits: number[] = [];
   for (let i = 0; i < count; i++) {
@@ -13,20 +12,18 @@ function generateVisualSequence(count: number): number[] {
     } while (
       i >= 3 && digits[i - 1] === d && digits[i - 2] === d && digits[i - 3] === d
     );
-    // Ensure ~44% even
     if (i > 0 && i % 5 < 2 && d % 2 !== 0) d = [2, 4, 6, 8][Math.floor(Math.random() * 4)];
     digits.push(d);
   }
   return digits;
 }
 
-// Generate auditory tone schedule (irregular intervals)
 function generateToneSchedule(durationMs: number): { time: number; isHigh: boolean }[] {
   const tones: { time: number; isHigh: boolean }[] = [];
   let t = 1000 + Math.random() * 500;
   while (t < durationMs - 200) {
     tones.push({ time: t, isHigh: Math.random() < 0.5 });
-    t += 1200 + Math.random() * 1600; // 1200-2800ms intervals
+    t += 1200 + Math.random() * 1600;
   }
   return tones;
 }
@@ -46,6 +43,30 @@ function playTone(frequency: number, duration: number = 200) {
     osc.stop(ctx.currentTime + duration / 1000);
   } catch {}
 }
+
+const BLOCK_COLORS = {
+  blockA: {
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    border: 'border-blue-300 dark:border-blue-700',
+    bannerBg: 'bg-blue-500',
+    label: 'VISUAL TASK',
+    desc: 'Tap LEFT for EVEN numbers',
+  },
+  blockB: {
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
+    border: 'border-amber-300 dark:border-amber-700',
+    bannerBg: 'bg-amber-500',
+    label: 'AUDITORY TASK',
+    desc: 'Tap RIGHT for HIGH tones',
+  },
+  blockC: {
+    bg: 'bg-purple-50 dark:bg-purple-950/30',
+    border: 'border-purple-300 dark:border-purple-700',
+    bannerBg: 'bg-purple-500',
+    label: 'BOTH TASKS',
+    desc: 'LEFT = even numbers • RIGHT = high tones',
+  },
+};
 
 type DualTaskPhase = 'instrA' | 'blockA' | 'instrB' | 'blockB' | 'instrC' | 'blockC';
 
@@ -73,8 +94,6 @@ export default function DualTaskComponent() {
   const blockStartRef = useRef(0);
   const activeRef = useRef(false);
 
-  const getDuration = useCallback(() => phase === 'blockC' ? 60 : 30, [phase]);
-
   const addResponse = useCallback((entry: DualTaskResponseEntry) => {
     if (phase === 'blockA') addBlockAResponse(entry);
     else if (phase === 'blockB') addBlockBResponse(entry);
@@ -88,7 +107,6 @@ export default function DualTaskComponent() {
     if (toneTimerRef.current) clearTimeout(toneTimerRef.current);
   }, []);
 
-  // Visual cycle
   const runVisualCycle = useCallback(() => {
     if (!activeRef.current) return;
     const seq = visualSeqRef.current;
@@ -105,7 +123,6 @@ export default function DualTaskComponent() {
 
     setTimeout(() => { if (activeRef.current) setShowDigit(false); }, 800);
 
-    // Process response at end of response window
     const idx = visualIndexRef.current;
     setTimeout(() => {
       if (!activeRef.current) return;
@@ -125,7 +142,6 @@ export default function DualTaskComponent() {
     }, 1200);
   }, [addResponse]);
 
-  // Tone schedule
   const scheduleTones = useCallback(() => {
     const schedule = toneScheduleRef.current;
     const startTime = blockStartRef.current;
@@ -146,7 +162,6 @@ export default function DualTaskComponent() {
         setToneActive(true);
         setTimeout(() => setToneActive(false), 200);
 
-        // Process response
         setTimeout(() => {
           if (!activeRef.current) return;
           if (!auditoryTappedRef.current) {
@@ -242,6 +257,10 @@ export default function DualTaskComponent() {
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 1 of 3: Visual task only</p>
           <div className="card-elevated p-6 space-y-3 text-left">
+            <div className={`rounded-lg px-4 py-3 ${BLOCK_COLORS.blockA.bg} border ${BLOCK_COLORS.blockA.border}`}>
+              <span className="font-bold text-blue-700 dark:text-blue-300">🔵 VISUAL TASK</span>
+              <span className="text-foreground ml-2">— screen will be blue</span>
+            </div>
             <p className="text-lg text-foreground">Numbers will appear on screen.</p>
             <p className="text-lg text-foreground font-bold">TAP when you see an EVEN number.</p>
             <p className="text-base text-muted-foreground">(2, 4, 6, 8)</p>
@@ -263,6 +282,10 @@ export default function DualTaskComponent() {
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 2 of 3: Listening task only</p>
           <div className="card-elevated p-6 space-y-3 text-left">
+            <div className={`rounded-lg px-4 py-3 ${BLOCK_COLORS.blockB.bg} border ${BLOCK_COLORS.blockB.border}`}>
+              <span className="font-bold text-amber-700 dark:text-amber-300">🟡 AUDITORY TASK</span>
+              <span className="text-foreground ml-2">— screen will be amber</span>
+            </div>
             <p className="text-lg text-foreground">You will hear tones through the speaker.</p>
             <p className="text-lg text-foreground font-bold">TAP when you hear a HIGH tone.</p>
             <p className="text-base text-foreground">Do NOT tap for low tones.</p>
@@ -283,6 +306,10 @@ export default function DualTaskComponent() {
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 3 of 3: Both at the same time</p>
           <div className="card-elevated p-6 space-y-3 text-left">
+            <div className={`rounded-lg px-4 py-3 ${BLOCK_COLORS.blockC.bg} border ${BLOCK_COLORS.blockC.border}`}>
+              <span className="font-bold text-purple-700 dark:text-purple-300">🟣 BOTH TASKS</span>
+              <span className="text-foreground ml-2">— screen will be purple</span>
+            </div>
             <p className="text-lg text-foreground font-bold">Now do BOTH tasks simultaneously.</p>
             <p className="text-base text-foreground"><span className="font-bold">LEFT zone</span> → tap for EVEN numbers</p>
             <p className="text-base text-foreground"><span className="font-bold">RIGHT zone</span> → tap for HIGH tones</p>
@@ -298,18 +325,26 @@ export default function DualTaskComponent() {
   }
 
   // Active block display
-  const blockLabel = phase === 'blockA' ? 'VISUAL TASK' : phase === 'blockB' ? 'AUDITORY TASK' : 'BOTH TASKS';
+  const blockKey = phase as 'blockA' | 'blockB' | 'blockC';
+  const blockStyle = BLOCK_COLORS[blockKey];
   const showVisual = phase === 'blockA' || phase === 'blockC';
   const showAuditory = phase === 'blockB' || phase === 'blockC';
 
   return (
-    <div className="min-h-screen flex flex-col bg-background select-none">
-      <div className="px-6 py-3 flex items-center justify-between border-b">
-        <div>
-          <span className="text-display text-base text-foreground">{blockLabel}</span>
-          {phase === 'blockA' && <p className="text-xs text-muted-foreground">Tap LEFT for EVEN numbers</p>}
-          {phase === 'blockB' && <p className="text-xs text-muted-foreground">Tap RIGHT for HIGH tones</p>}
-        </div>
+    <motion.div
+      key={phase}
+      initial={{ opacity: 0.7 }}
+      animate={{ opacity: 1 }}
+      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${blockStyle.bg}`}
+    >
+      {/* Big block banner */}
+      <div className={`${blockStyle.bannerBg} px-6 py-4 text-center`}>
+        <span className="text-white text-2xl font-black tracking-wider">{blockStyle.label}</span>
+        <p className="text-white/80 text-sm font-medium">{blockStyle.desc}</p>
+      </div>
+
+      <div className={`px-6 py-2 flex items-center justify-between border-b ${blockStyle.border}`}>
+        <div />
         <span className="text-sm font-mono text-muted-foreground">
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
         </span>
@@ -342,7 +377,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockA' || phase === 'blockC') && (
           <button
             onClick={handleLeftTap}
-            className="flex-1 min-h-[120px] rounded-xl border-2 border-primary/30 bg-primary/5 flex items-center justify-center active:bg-primary/20 transition-colors tap-target"
+            className={`flex-1 min-h-[120px] rounded-xl border-2 ${blockStyle.border} bg-background/80 flex items-center justify-center active:bg-primary/20 transition-colors tap-target`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-primary">EVEN</p>
@@ -353,7 +388,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockB' || phase === 'blockC') && (
           <button
             onClick={handleRightTap}
-            className="flex-1 min-h-[120px] rounded-xl border-2 border-warning/30 bg-warning/5 flex items-center justify-center active:bg-warning/20 transition-colors tap-target"
+            className={`flex-1 min-h-[120px] rounded-xl border-2 ${blockStyle.border} bg-background/80 flex items-center justify-center active:bg-warning/20 transition-colors tap-target`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-warning">HIGH</p>
@@ -362,6 +397,6 @@ export default function DualTaskComponent() {
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
