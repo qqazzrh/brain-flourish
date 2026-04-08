@@ -343,7 +343,7 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
     sessions.push({ number: i, complete: recall && lockin && sharpness, recall, lockin, sharpness });
   }
 
-  const latestIncomplete = sessions.find(s => !s.complete);
+  const incompleteSessions = sessions.filter(s => !s.complete);
   const nextNewSession = totalSessions + 1;
 
   if (!loaded) {
@@ -401,12 +401,19 @@ function SessionHistoryScreen({ participant, onContinue, onStartNew, onBack }: {
       )}
 
       <div className="space-y-3">
-        {latestIncomplete && (
-          <Button variant="hero" size="xl" className="w-full gap-2" onClick={() => onContinue(latestIncomplete.number)}>
-            <Play className="w-5 h-5" /> {latestIncomplete.recall || latestIncomplete.lockin || latestIncomplete.sharpness ? 'Continue' : 'Start'} Session {latestIncomplete.number}
+        {incompleteSessions.map((s, i) => (
+          <Button
+            key={s.number}
+            variant={i === 0 ? 'hero' : 'outline'}
+            size="xl"
+            className="w-full gap-2"
+            onClick={() => onContinue(s.number)}
+          >
+            <Play className="w-5 h-5" />
+            {s.recall || s.lockin || s.sharpness ? 'Continue' : 'Start'} Session {s.number}
           </Button>
-        )}
-        <Button variant={latestIncomplete ? 'outline' : 'hero'} size="xl" className="w-full gap-2" onClick={() => onStartNew(nextNewSession)}>
+        ))}
+        <Button variant={incompleteSessions.length > 0 ? 'outline' : 'hero'} size="xl" className="w-full gap-2" onClick={() => onStartNew(nextNewSession)}>
           <Plus className="w-5 h-5" /> Start New Session {nextNewSession}
         </Button>
       </div>
