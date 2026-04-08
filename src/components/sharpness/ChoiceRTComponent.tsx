@@ -52,6 +52,7 @@ export default function ChoiceRTComponent() {
   const [currentRule, setCurrentRule] = useState<'compatible' | 'incompatible'>('compatible');
   const [lastFeedback, setLastFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [wrongZone, setWrongZone] = useState<number | null>(null);
+  const [correctZoneFlash, setCorrectZoneFlash] = useState<number | null>(null);
 
   const sequenceRef = useRef(generateChoiceSequence(70));
   const indexRef = useRef(0);
