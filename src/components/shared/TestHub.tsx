@@ -100,8 +100,13 @@ export default function TestHub() {
               ))}
             </div>
             {recallDone && lockinDone && sharpnessDone && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 text-center p-4 bg-success/10 text-success rounded-lg font-medium">
-                ✓ All tests complete for Session {currentSessionNumber} — go to Scoring tab to view results
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 text-center space-y-3">
+                <div className="p-4 bg-success/10 text-success rounded-lg font-medium">
+                  ✓ All tests complete for Session {currentSessionNumber}
+                </div>
+                <Button variant="hero" size="xl" className="w-full gap-2" onClick={() => setActiveTab('scoring')}>
+                  <BarChart3 className="w-5 h-5" /> View Brain Score
+                </Button>
               </motion.div>
             )}
           </>
