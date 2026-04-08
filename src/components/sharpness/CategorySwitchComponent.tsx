@@ -47,6 +47,7 @@ export default function CategorySwitchComponent() {
   const [ruleIndex, setRuleIndex] = useState(0);
   const [trialInBlock, setTrialInBlock] = useState(0);
   const [feedback, setFeedback] = useState<{ correct: boolean; key: number } | null>(null);
+  const [wrongOption, setWrongOption] = useState<string | null>(null);
 
   const practiceWords = useMemo(() => getShuffledWordSet(10), []);
   const realWords = useMemo(() => getShuffledWordSet(30), []);
@@ -115,6 +116,11 @@ export default function CategorySwitchComponent() {
     const rt = Math.round(performance.now() - stimOnsetRef.current);
     const correctAnswer = currentTrial.answers[currentRule];
     const isCorrect = option === correctAnswer;
+
+    if (!isCorrect) {
+      setWrongOption(option);
+      setTimeout(() => setWrongOption(null), 300);
+    }
 
     if (phase === 'practice') {
       feedbackKey.current += 1;
@@ -283,7 +289,7 @@ export default function CategorySwitchComponent() {
           <button
             key={option}
             onClick={() => handleOptionTap(option)}
-            className={`flex-1 min-h-[80px] rounded-xl border-2 ${colors.border} bg-background/80 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target`}
+            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongOption === option ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
             <span className="text-display text-base text-foreground">{option}</span>
           </button>
