@@ -72,20 +72,20 @@ export default function TestHub() {
         </div>
       </div>
 
-      <main className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
+      <main className="flex-1 px-6 py-8 max-w-3xl mx-auto w-full">
         {activeTab === 'tests' && (
           <>
-            <p className="text-sm text-muted-foreground mb-4">Session {currentSessionNumber} — Select a test module:</p>
-            <div className="space-y-4">
+            <p className="text-sm md:text-base text-muted-foreground mb-4">Session {currentSessionNumber} — Select a test module:</p>
+            <div className="space-y-4 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
               {modules.map((mod, i) => (
                 <motion.div key={mod.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                  <button onClick={() => navigate(mod.path)} className="w-full text-left block card-elevated p-6 hover:border-primary/40 transition-all group">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${mod.done ? 'bg-success/10 group-hover:bg-success/20' : 'bg-primary/10 group-hover:bg-primary/20'}`}>
-                        {mod.done ? <CheckCircle2 className="w-6 h-6 text-success" /> : <mod.icon className="w-6 h-6 text-primary" />}
+                  <button onClick={() => navigate(mod.path)} className="w-full text-left block card-elevated p-6 hover:border-primary/40 transition-all group h-full">
+                    <div className="flex flex-col items-center text-center gap-3 md:gap-4">
+                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 transition-colors ${mod.done ? 'bg-success/10 group-hover:bg-success/20' : 'bg-primary/10 group-hover:bg-primary/20'}`}>
+                        {mod.done ? <CheckCircle2 className="w-8 h-8 text-success" /> : <mod.icon className="w-8 h-8 text-primary" />}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <span className="text-xs text-muted-foreground font-medium">MODULE {mod.module}</span>
                           <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${mod.done ? 'bg-success/10 text-success' : 'bg-warning/15 text-warning'}`}>
                             {mod.done ? 'Done' : 'Ready'}
