@@ -79,6 +79,8 @@ export default function DualTaskComponent() {
   const [toneActive, setToneActive] = useState(false);
   const [leftWrong, setLeftWrong] = useState(false);
   const [rightWrong, setRightWrong] = useState(false);
+  const [leftCorrect, setLeftCorrect] = useState(false);
+  const [rightCorrect, setRightCorrect] = useState(false);
 
   const visualSeqRef = useRef<number[]>([]);
   const toneScheduleRef = useRef<{ time: number; isHigh: boolean }[]>([]);
@@ -229,6 +231,9 @@ export default function DualTaskComponent() {
     if (!isEven) {
       setLeftWrong(true);
       setTimeout(() => setLeftWrong(false), 300);
+    } else {
+      setLeftCorrect(true);
+      setTimeout(() => setLeftCorrect(false), 300);
     }
 
     addResponse({
@@ -250,6 +255,9 @@ export default function DualTaskComponent() {
     if (!isHigh) {
       setRightWrong(true);
       setTimeout(() => setRightWrong(false), 300);
+    } else {
+      setRightCorrect(true);
+      setTimeout(() => setRightCorrect(false), 300);
     }
 
     addResponse({
@@ -389,7 +397,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockA' || phase === 'blockC') && (
           <button
             onClick={handleLeftTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${leftWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${blockStyle.border} bg-background/80 active:bg-primary/20`}`}
+            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${leftWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : leftCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-primary/20`}`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-primary">EVEN</p>
@@ -400,7 +408,7 @@ export default function DualTaskComponent() {
         {(phase === 'blockB' || phase === 'blockC') && (
           <button
             onClick={handleRightTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${rightWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${blockStyle.border} bg-background/80 active:bg-warning/20`}`}
+            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${rightWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : rightCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-warning/20`}`}
           >
             <div className="text-center">
               <p className="text-lg font-bold text-warning">HIGH</p>
