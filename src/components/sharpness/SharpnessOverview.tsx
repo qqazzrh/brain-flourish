@@ -5,12 +5,7 @@ import { motion } from 'framer-motion';
 export default function SharpnessOverview() {
   const { goToScreen, setSkipPractice } = useSharpness();
 
-  const handleWithPractice = () => {
-    setSkipPractice(false);
-    goToScreen(2);
-  };
-
-  const handleSkipPractice = () => {
+  const handleStart = () => {
     setSkipPractice(true);
     goToScreen(2);
   };
@@ -41,14 +36,9 @@ export default function SharpnessOverview() {
 
         <p className="text-center text-sm text-muted-foreground">Total time: about 4 minutes.</p>
 
-        <div className="space-y-3">
-          <Button variant="hero" size="xl" className="w-full" onClick={handleWithPractice}>
-            Begin with Practice Rounds
-          </Button>
-          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={handleSkipPractice}>
-            Skip Practices — Start Real Tests
-          </Button>
-        </div>
+        <Button variant="hero" size="xl" className="w-full" onClick={handleStart}>
+          Start Test
+        </Button>
       </div>
     </motion.div>
   );
