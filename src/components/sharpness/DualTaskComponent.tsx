@@ -73,7 +73,7 @@ type DualTaskPhase = 'instrA' | 'blockA' | 'instrB' | 'blockB' | 'instrC' | 'blo
 export default function DualTaskComponent() {
   const { goToScreen, addBlockAResponse, addBlockBResponse, addBlockCResponse } = useSharpness();
   const [phase, setPhase] = useState<DualTaskPhase>('instrA');
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(10);
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [showDigit, setShowDigit] = useState(false);
   const [toneActive, setToneActive] = useState(false);
@@ -185,7 +185,7 @@ export default function DualTaskComponent() {
   }, [addResponse]);
 
   const startBlock = useCallback((blockPhase: DualTaskPhase) => {
-    const dur = blockPhase === 'blockC' ? 60 : 30;
+    const dur = blockPhase === 'blockC' ? 60 : 10;
     setTimeLeft(dur);
     activeRef.current = true;
     blockStartRef.current = performance.now();
@@ -193,7 +193,7 @@ export default function DualTaskComponent() {
     toneIndexRef.current = 0;
 
     if (blockPhase === 'blockA' || blockPhase === 'blockC') {
-      visualSeqRef.current = generateVisualSequence(blockPhase === 'blockC' ? 50 : 25);
+      visualSeqRef.current = generateVisualSequence(blockPhase === 'blockC' ? 50 : 10);
       runVisualCycle();
     }
     if (blockPhase === 'blockB' || blockPhase === 'blockC') {
@@ -278,7 +278,7 @@ export default function DualTaskComponent() {
             <p className="text-base text-muted-foreground">(2, 4, 6, 8)</p>
             <p className="text-base text-foreground">Do NOT tap for odd numbers.</p>
           </div>
-          <p className="text-sm text-muted-foreground">30 seconds. Starting now.</p>
+          <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
           <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockA'); startBlock('blockA'); }}>
             I'm ready — Start
           </Button>
@@ -302,7 +302,7 @@ export default function DualTaskComponent() {
             <p className="text-lg text-foreground font-bold">TAP when you hear a HIGH tone.</p>
             <p className="text-base text-foreground">Do NOT tap for low tones.</p>
           </div>
-          <p className="text-sm text-muted-foreground">30 seconds. Starting now.</p>
+          <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
           <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockB'); startBlock('blockB'); }}>
             I'm ready — Start
           </Button>
