@@ -3,7 +3,7 @@ import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
-import { saveSession, generateSessionId, saveParticipant, savePillarScore } from '@/lib/storage';
+import { saveSession, saveParticipant, savePillarScore } from '@/lib/storage';
 import { motion } from 'framer-motion';
 import { Check, X, Edit3, Save, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
