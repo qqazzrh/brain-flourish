@@ -860,7 +860,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
           variant="outline"
           size="xl"
           className="flex-1 gap-2"
-          onClick={() => exportScoreCardPNG(result, participantId, participantName, sessionNumber)}
+          onClick={() => exportScoreCardPNG(result, participantId, participantName, sessionNumber, sessionData, recallRaw, lockinRaw, sharpnessRaw)}
         >
           <Image className="w-5 h-5" /> Share PNG
         </Button>
