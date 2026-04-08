@@ -51,6 +51,7 @@ export default function ChoiceRTComponent() {
   const [flashingBox, setFlashingBox] = useState<number | null>(null);
   const [currentRule, setCurrentRule] = useState<'compatible' | 'incompatible'>('compatible');
   const [lastFeedback, setLastFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [wrongZone, setWrongZone] = useState<number | null>(null);
 
   const sequenceRef = useRef(generateChoiceSequence(70));
   const indexRef = useRef(0);
@@ -127,6 +128,11 @@ export default function ChoiceRTComponent() {
     const rule = getRuleForElapsed(elapsedRef.current, isPractice);
     const correctZone = rule === 'compatible' ? seq[idx] : getOpposite(seq[idx]);
     const isCorrect = zone === correctZone;
+
+    if (!isCorrect) {
+      setWrongZone(zone);
+      setTimeout(() => setWrongZone(null), 300);
+    }
 
     if (isPractice) {
       setLastFeedback(isCorrect ? 'correct' : 'wrong');
@@ -333,7 +339,7 @@ export default function ChoiceRTComponent() {
           <button
             key={zone}
             onClick={() => handleTapZone(zone)}
-            className={`flex-1 min-h-[80px] rounded-xl border-2 ${colors.border} bg-background/80 flex items-center justify-center active:bg-primary/20 active:border-primary transition-colors tap-target`}
+            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongZone === zone ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
             <span className="text-display text-xl text-foreground">{zone}</span>
           </button>
