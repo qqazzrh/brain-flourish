@@ -26,8 +26,8 @@ export default function TestHub() {
   const sharpnessDone = sessionScores?.sharpness_raw != null;
 
   const modules = [
-    { title: 'Recall Test', subtitle: 'Episodic Verbal Memory', icon: Brain, path: '/recall', module: 1, done: recallDone, estimate: '~8 min' },
-    { title: 'Lock-In Test', subtitle: 'Sustained Attention', icon: Lock, path: '/lock-in', module: 2, done: lockinDone, estimate: '~7 min' },
+    { title: 'Lock-In Test', subtitle: 'Sustained Attention', icon: Lock, path: '/lock-in', module: 1, done: lockinDone, estimate: '~7 min' },
+    { title: 'Recall Test', subtitle: 'Episodic Verbal Memory', icon: Brain, path: '/recall', module: 2, done: recallDone, estimate: '~8 min' },
     { title: 'Sharpness Test', subtitle: 'Processing Speed', icon: Zap, path: '/sharpness', module: 3, done: sharpnessDone, estimate: '~10 min' },
   ];
 
