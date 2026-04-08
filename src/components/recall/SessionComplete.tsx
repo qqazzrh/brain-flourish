@@ -45,61 +45,62 @@ export default function SessionComplete() {
     if (!participant || saving) return;
     setSaving(true);
 
-    const sessionId = await generateSessionId();
-    const now = new Date().toISOString();
-    const session: SessionRecord = {
-      session_id: sessionId,
-      participant_id: participant.participant_id,
-      participant_type: participantType,
-      session_number: currentSessionNumber,
-      facilitator_id: facilitator?.id || '',
-      location,
-      timestamp_start: sessionStartTime || now,
-      timestamp_end: now,
-      session_duration_seconds: sessionDuration,
-      practice: isPractice,
-      recall_test: {
-        form_id: assignedForm,
-        passage_domain: FORM_DOMAINS[assignedForm],
-        distraction_category: task.category,
-        distraction_letter: task.letter,
-        distraction_valid_count: state.distractionValidCount,
-        distraction_invalid_count: state.distractionInvalidCount,
-        distraction_duration_seconds: 90,
-        distraction_timer_start: state.distractionTimerStart,
-        one_time_prompt_used: state.oneTimePromptUsed,
-        recall_duration_seconds: state.recallStartTime ? Math.round((Date.now() - new Date(state.recallStartTime).getTime()) / 1000) : 0,
-        recall_timer_used: state.recallTimerUsed,
-        units_recalled: Array.from(state.recalledUnits),
-        units_missed: units.filter(u => !state.recalledUnits.has(u.unit_id)).map(u => u.unit_id),
-        recall_order_timestamps: state.recallOrderTimestamps,
-        raw_score: rawScore,
-        pillar_score: pillarScore,
-        fluency_score: state.distractionValidCount,
-        category_scores: categoryScores,
-        score_edited_before_save: state.scoreEdited,
-        sync_status: 'local_only',
-      },
-    };
+    try {
+      const sessionId = await generateSessionId();
+      const now = new Date().toISOString();
+      const session: SessionRecord = {
+        session_id: sessionId,
+        participant_id: participant.participant_id,
+        participant_type: participantType,
+        session_number: currentSessionNumber,
+        facilitator_id: facilitator?.id || '',
+        location,
+        timestamp_start: sessionStartTime || now,
+        timestamp_end: now,
+        session_duration_seconds: sessionDuration,
+        practice: isPractice,
+        recall_test: {
+          form_id: assignedForm,
+          passage_domain: FORM_DOMAINS[assignedForm],
+          distraction_category: task.category,
+          distraction_letter: task.letter,
+          distraction_valid_count: state.distractionValidCount,
+          distraction_invalid_count: state.distractionInvalidCount,
+          distraction_duration_seconds: 90,
+          distraction_timer_start: state.distractionTimerStart,
+          one_time_prompt_used: state.oneTimePromptUsed,
+          recall_duration_seconds: state.recallStartTime ? Math.round((Date.now() - new Date(state.recallStartTime).getTime()) / 1000) : 0,
+          recall_timer_used: state.recallTimerUsed,
+          units_recalled: Array.from(state.recalledUnits),
+          units_missed: units.filter(u => !state.recalledUnits.has(u.unit_id)).map(u => u.unit_id),
+          recall_order_timestamps: state.recallOrderTimestamps,
+          raw_score: rawScore,
+          pillar_score: pillarScore,
+          fluency_score: state.distractionValidCount,
+          category_scores: categoryScores,
+          score_edited_before_save: state.scoreEdited,
+          sync_status: 'local_only',
+        },
+      };
 
-    await saveSession(session);
-    await savePillarScore(participant.participant_id, currentSessionNumber, {
-      recall_raw: pillarScore,
-      recall_fluency: state.distractionValidCount,
-    });
+      await saveSession(session);
+      await savePillarScore(participant.participant_id, currentSessionNumber, {
+        recall_raw: pillarScore,
+        recall_fluency: state.distractionValidCount,
+      });
 
-    const updatedP = { ...participant };
-    if (currentSessionNumber > updatedP.session_count) {
-      updatedP.session_count = currentSessionNumber;
+      const updatedP = { ...participant };
+      if (currentSessionNumber > updatedP.session_count) {
+        updatedP.session_count = currentSessionNumber;
+      }
+      updatedP.last_session_date = now.split('T')[0];
+      await saveParticipant(updatedP);
+      setSaved(true);
+    } catch (err) {
+      console.error('handleSave error:', err);
+    } finally {
+      setSaving(false);
     }
-    updatedP.last_session_date = now.split('T')[0];
-    updatedP.last_recall_raw_score = rawScore;
-    if (!updatedP.sessions.includes(sessionId)) {
-      updatedP.sessions = [...updatedP.sessions, sessionId];
-    }
-    await saveParticipant(updatedP);
-    setSaved(true);
-    setSaving(false);
   };
 
   const handleBackToHub = () => {
