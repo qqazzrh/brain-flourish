@@ -41,10 +41,7 @@ export default function LockInExplanation() {
 
         <div className="space-y-3">
           <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
-            Practice First
-          </Button>
-          <Button variant="outline" size="lg" className="w-full text-muted-foreground" onClick={() => goToScreen(4)}>
-            Skip Practice — Start Real Test
+            Start Test
           </Button>
         </div>
       </div>
