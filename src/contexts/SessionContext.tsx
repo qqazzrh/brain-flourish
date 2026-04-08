@@ -33,14 +33,12 @@ function readStoredSession(): PersistedSessionState {
     if (!raw) return DEFAULT_SESSION_STATE;
 
     const parsed = JSON.parse(raw) as Partial<PersistedSessionState>;
-    const assignedForm = parsed.assignedForm;
-
     return {
       facilitator: parsed.facilitator ?? null,
       location: typeof parsed.location === 'string' ? parsed.location : '',
       participant: parsed.participant ?? null,
       participantType: parsed.participantType === 'returning' ? 'returning' : 'new',
-      assignedForm: assignedForm === 'A' || assignedForm === 'B' || assignedForm === 'C' || assignedForm === 'D' ? assignedForm : 'A',
+      assignedForm: typeof parsed.assignedForm === 'string' && parsed.assignedForm ? parsed.assignedForm : 'A',
       isPractice: Boolean(parsed.isPractice),
       sessionStartTime: typeof parsed.sessionStartTime === 'string' ? parsed.sessionStartTime : null,
       currentSessionNumber: typeof parsed.currentSessionNumber === 'number' && parsed.currentSessionNumber > 0 ? parsed.currentSessionNumber : 1,

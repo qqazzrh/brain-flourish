@@ -1,4 +1,4 @@
-export type FormId = 'A' | 'B' | 'C' | 'D';
+export type FormId = string;
 export type UnitCategory = 'WHO' | 'WHAT' | 'WHERE' | 'WHEN' | 'SPECIFIC';
 export type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict';
 export type ParticipantType = 'new' | 'returning';
