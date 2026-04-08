@@ -355,17 +355,17 @@ export default function DualTaskComponent() {
       key={phase}
       initial={{ opacity: 0.7 }}
       animate={{ opacity: 1 }}
-      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${blockStyle.bg}`}
+      className={`h-[100dvh] flex flex-col select-none transition-colors duration-300 ${blockStyle.bg}`}
     >
       {/* Big block banner */}
-      <div className={`${blockStyle.bannerBg} px-6 py-4 text-center`}>
-        <span className="text-white text-2xl font-black tracking-wider">{blockStyle.label}</span>
-        <p className="text-white/80 text-sm font-medium">{blockStyle.desc}</p>
+      <div className={`${blockStyle.bannerBg} px-6 py-4 md:py-5 text-center`}>
+        <span className="text-white text-2xl md:text-3xl font-black tracking-wider">{blockStyle.label}</span>
+        <p className="text-white/80 text-sm md:text-base font-medium">{blockStyle.desc}</p>
       </div>
 
       <div className={`px-6 py-2 flex items-center justify-between border-b ${blockStyle.border}`}>
         <div />
-        <span className="text-sm font-mono text-muted-foreground">
+        <span className="text-sm md:text-base font-mono text-muted-foreground">
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
         </span>
       </div>
@@ -373,11 +373,11 @@ export default function DualTaskComponent() {
       {/* Stimulus area */}
       <div className="flex-1 flex items-center justify-center">
         {showVisual && (
-          <div className="h-32 flex items-center justify-center">
+          <div className="h-32 md:h-48 flex items-center justify-center">
             <AnimatePresence>
               {showDigit && currentDigit !== null && (
                 <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="text-display text-[80px] text-foreground">
+                  className="text-display text-[80px] md:text-[120px] text-foreground">
                   {currentDigit}
                 </motion.span>
               )}
@@ -386,8 +386,8 @@ export default function DualTaskComponent() {
         )}
         {!showVisual && showAuditory && (
           <div className="text-center space-y-3">
-            <div className={`text-6xl transition-transform ${toneActive ? 'scale-125' : ''}`}>🔊</div>
-            <p className="text-lg text-muted-foreground">Listen carefully</p>
+            <div className={`text-6xl md:text-8xl transition-transform ${toneActive ? 'scale-125' : ''}`}>🔊</div>
+            <p className="text-lg md:text-xl text-muted-foreground">Listen carefully</p>
           </div>
         )}
       </div>
@@ -397,22 +397,22 @@ export default function DualTaskComponent() {
         {(phase === 'blockA' || phase === 'blockC') && (
           <button
             onClick={handleLeftTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${leftWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : leftCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-primary/20`}`}
+            className={`flex-1 min-h-[120px] md:min-h-[150px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${leftWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : leftCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-primary/20`}`}
           >
             <div className="text-center">
-              <p className="text-lg font-bold text-primary">EVEN</p>
-              <p className="text-sm text-primary/70">NUMBER</p>
+              <p className="text-lg md:text-xl font-bold text-primary">EVEN</p>
+              <p className="text-sm md:text-base text-primary/70">NUMBER</p>
             </div>
           </button>
         )}
         {(phase === 'blockB' || phase === 'blockC') && (
           <button
             onClick={handleRightTap}
-            className={`flex-1 min-h-[120px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${rightWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : rightCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-warning/20`}`}
+            className={`flex-1 min-h-[120px] md:min-h-[150px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${rightWrong ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : rightCorrect ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : `${blockStyle.border} bg-background/80 active:bg-warning/20`}`}
           >
             <div className="text-center">
-              <p className="text-lg font-bold text-warning">HIGH</p>
-              <p className="text-sm text-warning/70">TONE</p>
+              <p className="text-lg md:text-xl font-bold text-warning">HIGH</p>
+              <p className="text-sm md:text-base text-warning/70">TONE</p>
             </div>
           </button>
         )}

@@ -287,16 +287,16 @@ export default function ChoiceRTComponent() {
       key={currentRule}
       initial={{ opacity: 0.7 }}
       animate={{ opacity: 1 }}
-      className={`min-h-screen flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
+      className={`h-[100dvh] flex flex-col select-none transition-colors duration-300 ${colors.bg}`}
     >
       {/* Big rule banner */}
-      <div className={`${colors.bannerBg} px-6 py-4 text-center`}>
+      <div className={`${colors.bannerBg} px-6 py-4 md:py-5 text-center`}>
         <div className="flex items-center justify-center gap-3">
-          <span className="text-white text-2xl font-black tracking-wider">
+          <span className="text-white text-2xl md:text-3xl font-black tracking-wider">
             {currentRule === 'compatible' ? 'TAP THE BOX' : 'TAP OPPOSITE'}
           </span>
         </div>
-        <p className="text-white/80 text-sm font-medium">
+        <p className="text-white/80 text-sm md:text-base font-medium">
           {currentRule === 'compatible' ? 'Tap the box that flashed' : 'Tap the opposite side (1↔4, 2↔3)'}
         </p>
       </div>
@@ -305,7 +305,7 @@ export default function ChoiceRTComponent() {
         <div>
           {isPractice && <span className="text-xs font-bold text-amber-500 uppercase">Practice</span>}
         </div>
-        <span className="text-sm font-mono text-muted-foreground">
+        <span className="text-sm md:text-base font-mono text-muted-foreground">
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} left
         </span>
       </div>
@@ -319,7 +319,7 @@ export default function ChoiceRTComponent() {
 
       {/* Stimulus boxes */}
       <div className="flex-1 flex items-center justify-center px-6">
-        <div className="flex gap-4 w-full max-w-md">
+        <div className="flex gap-4 md:gap-6 w-full max-w-md md:max-w-xl">
           {[1, 2, 3, 4].map(pos => (
             <div
               key={pos}
@@ -329,7 +329,7 @@ export default function ChoiceRTComponent() {
                   : 'bg-background/80 border-border'
               }`}
             >
-              <span className={`text-display text-2xl ${flashingBox === pos ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
+              <span className={`text-display text-2xl md:text-4xl ${flashingBox === pos ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
                 {pos}
               </span>
             </div>
@@ -338,14 +338,14 @@ export default function ChoiceRTComponent() {
       </div>
 
       {/* Response tap zones */}
-      <div className="px-6 pb-8 flex gap-3">
+      <div className="px-6 pb-8 flex gap-3 md:gap-5">
         {[1, 2, 3, 4].map(zone => (
           <button
             key={zone}
             onClick={() => handleTapZone(zone)}
-            className={`flex-1 min-h-[80px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${correctZoneFlash === zone ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : wrongZone === zone ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
+            className={`flex-1 min-h-[80px] md:min-h-[100px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${correctZoneFlash === zone ? 'border-green-500 bg-green-200/60 dark:bg-green-900/40' : wrongZone === zone ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
-            <span className="text-display text-xl text-foreground">{zone}</span>
+            <span className="text-display text-xl md:text-2xl text-foreground">{zone}</span>
           </button>
         ))}
       </div>
