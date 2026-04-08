@@ -477,28 +477,43 @@ async function exportScoreCardPNG(
   ctx.lineTo(w - 80, 195);
   ctx.stroke();
 
-  // Composite score
-  const compositeY = 320;
-  const compositeColor = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
-  ctx.font = 'bold 160px "Space Grotesk", system-ui, sans-serif';
-  ctx.fillStyle = compositeColor;
-  ctx.textAlign = 'center';
-  ctx.fillText(String(result.bfsComposite), w / 2, compositeY);
-
-  ctx.font = '28px "IBM Plex Sans", system-ui, sans-serif';
-  ctx.fillStyle = '#64748b';
-  ctx.fillText('BRAIN SCORE  /  100', w / 2, compositeY + 40);
-
-  ctx.font = '22px "IBM Plex Sans", system-ui, sans-serif';
-  const gapColor = result.bfsGap >= 0 ? '#10b981' : '#ef4444';
-  ctx.fillStyle = gapColor;
-  const gapText = result.bfsGap >= 0 ? `+${result.bfsGap} above minimum` : `${Math.abs(result.bfsGap)} below minimum`;
-  ctx.fillText(`Minimum: ${result.bfsTarget}  |  ${gapText}`, w / 2, compositeY + 80);
-
-  // Pillar bars
-  const barStartY = 460;
+  // Composite score bar
+  const compBarY = 230;
   const barMargin = 80;
   const barW = w - barMargin * 2;
+  const compBarH = 56;
+
+  ctx.font = 'bold 22px "Space Grotesk", system-ui, sans-serif';
+  ctx.fillStyle = '#f8fafc';
+  ctx.textAlign = 'left';
+  ctx.fillText('BRAIN SCORE', barMargin, compBarY - 8);
+  ctx.textAlign = 'right';
+  const compositeColor = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
+  ctx.fillStyle = compositeColor;
+  ctx.font = 'bold 36px "Space Grotesk", system-ui, sans-serif';
+  ctx.fillText(String(result.bfsComposite), w - barMargin, compBarY - 4);
+
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.roundRect(barMargin, compBarY, barW, compBarH, 8); ctx.fill();
+  const compFillW = (result.bfsComposite / 100) * barW;
+  ctx.fillStyle = compositeColor;
+  ctx.beginPath(); ctx.roundRect(barMargin, compBarY, compFillW, compBarH, 8); ctx.fill();
+  const compThreshX = barMargin + (75 / 100) * barW;
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(compThreshX, compBarY - 4); ctx.lineTo(compThreshX, compBarY + compBarH + 4); ctx.stroke();
+  ctx.font = '14px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#22c55e'; ctx.textAlign = 'center';
+  ctx.fillText('MIN 75', compThreshX, compBarY + compBarH + 20);
+
+  ctx.font = '20px "IBM Plex Sans", system-ui, sans-serif';
+  const gapColor = result.bfsGap >= 0 ? '#10b981' : '#ef4444';
+  ctx.fillStyle = gapColor;
+  ctx.textAlign = 'center';
+  const gapText = result.bfsGap >= 0 ? `+${result.bfsGap} above minimum` : `${Math.abs(result.bfsGap)} below minimum`;
+  ctx.fillText(`Minimum: ${result.bfsTarget}  |  ${gapText}`, w / 2, compBarY + compBarH + 50);
+
+  // Pillar bars
+  const barStartY = compBarY + compBarH + 100;
   const barH = 48;
   const barGap = 100;
 
