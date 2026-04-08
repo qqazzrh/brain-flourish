@@ -90,13 +90,14 @@ export async function savePillarScore(participantId: string, sessionNumber: numb
     .maybeSingle();
 
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('pillar_scores')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('participant_id', participantId)
       .eq('session_number', sessionNumber);
+    if (error) console.error('savePillarScore update error:', error);
   } else {
-    await supabase.from('pillar_scores').insert({
+    const { error } = await supabase.from('pillar_scores').insert({
       participant_id: participantId,
       session_number: sessionNumber,
       recall_raw: null,
@@ -108,6 +109,7 @@ export async function savePillarScore(participantId: string, sessionNumber: numb
       sharpness_rt_switch_cost_ms: null,
       ...updates,
     });
+    if (error) console.error('savePillarScore insert error:', error);
   }
 }
 
