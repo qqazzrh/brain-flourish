@@ -3,7 +3,7 @@ import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { UnitCategory, SessionRecord, CategoryScore } from '@/lib/types';
-import { saveSession, generateSessionId, saveParticipant, savePillarScore } from '@/lib/storage';
+import { saveSession, saveParticipant, savePillarScore } from '@/lib/storage';
 import { motion } from 'framer-motion';
 import { Check, X, Edit3, Save, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -55,9 +55,9 @@ export default function SessionComplete() {
     setSaving(true);
 
     try {
-      const sessionId = await generateSessionId();
+      const sessionId = `${participant.participant_id}-S${currentSessionNumber}`;
       const now = new Date().toISOString();
-      const session: SessionRecord = {
+      const session: any = {
         session_id: sessionId,
         participant_id: participant.participant_id,
         participant_type: participantType,
@@ -68,6 +68,7 @@ export default function SessionComplete() {
         timestamp_end: now,
         session_duration_seconds: sessionDuration,
         practice: isPractice,
+        recall_done: true,
         recall_test: {
           form_id: assignedForm,
           passage_domain: formDomain || 'Unknown',
