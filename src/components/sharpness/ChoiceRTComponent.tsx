@@ -130,7 +130,10 @@ export default function ChoiceRTComponent() {
     const correctZone = rule === 'compatible' ? seq[idx] : getOpposite(seq[idx]);
     const isCorrect = zone === correctZone;
 
-    if (!isCorrect) {
+    if (isCorrect) {
+      setCorrectZoneFlash(zone);
+      setTimeout(() => setCorrectZoneFlash(null), 300);
+    } else {
       setWrongZone(zone);
       setTimeout(() => setWrongZone(null), 300);
     }
