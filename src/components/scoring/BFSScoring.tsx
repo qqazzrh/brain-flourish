@@ -289,15 +289,170 @@ function ScoreBar({ label, score, target, color }: { label: string; score: numbe
 }
 
 /* ===== PNG EXPORT ===== */
+function drawRawDataOnCanvas(ctx: CanvasRenderingContext2D, w: number, startY: number, sessionData: any, recallRaw: number, lockinRaw: number, sharpnessRaw: number): number {
+  let y = startY;
+  const margin = 80;
+
+  // Section header
+  ctx.font = 'bold 28px "Space Grotesk", system-ui, sans-serif';
+  ctx.fillStyle = '#f8fafc';
+  ctx.textAlign = 'left';
+  ctx.fillText('RAW PERFORMANCE DATA', margin, y);
+  y += 24;
+  ctx.font = '16px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText('Actual test performance — no algorithms or percentiles', margin, y);
+  y += 30;
+
+  const drawRow = (label: string, value: string, yPos: number) => {
+    ctx.font = '18px "IBM Plex Sans", system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, margin + 20, yPos);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.textAlign = 'right';
+    ctx.fillText(value, w - margin - 20, yPos);
+    return yPos + 26;
+  };
+
+  const drawSectionHeader = (label: string, score: number, color: string, yPos: number) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(margin + 10, yPos - 5, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = 'bold 20px "Space Grotesk", system-ui, sans-serif';
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, margin + 26, yPos);
+    ctx.font = 'bold 22px "Space Grotesk", system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(score), w - margin - 20, yPos);
+    return yPos + 30;
+  };
+
+  const recallData = sessionData?.recall_test_data;
+  const lockinData = sessionData?.lockin_test_data;
+  const sharpnessData = sessionData?.sharpness_test_data;
+
+  // RECALL
+  y = drawSectionHeader('RECALL', recallRaw, '#3b82f6', y);
+  if (recallData) {
+    const totalUnits = (recallData.units_recalled?.length || 0) + (recallData.units_missed?.length || 0) || 20;
+    y = drawRow('Units recalled', `${recallData.raw_score} / ${totalUnits}`, y);
+    y = drawRow('Units missed', String(recallData.units_missed?.length || 0), y);
+    y = drawRow('Distraction valid answers', `${recallData.distraction_valid_count} in 90s`, y);
+    y = drawRow('Distraction repeats', String(recallData.distraction_invalid_count || 0), y);
+    y = drawRow('Recall duration', `${recallData.recall_duration_seconds}s`, y);
+    y = drawRow('Prompt used', recallData.one_time_prompt_used ? 'Yes' : 'No', y);
+    if (recallData.category_scores) {
+      for (const [cat, cs] of Object.entries(recallData.category_scores) as [string, any][]) {
+        y = drawRow(`  ${cat.replace('_', ' ')}`, `${cs.score} / ${cs.max}`, y);
+      }
+    }
+  } else {
+    y = drawRow('No detailed data', '', y);
+  }
+  y += 10;
+
+  // Separator
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(w - margin, y); ctx.stroke();
+  y += 20;
+
+  // LOCK-IN
+  y = drawSectionHeader('LOCK-IN', lockinRaw, '#8b5cf6', y);
+  if (lockinData?.scores) {
+    y = drawRow('Total stimuli', String(lockinData.scores.totalNonTargets + lockinData.scores.totalTargets), y);
+    y = drawRow('Hits (correct taps)', `${lockinData.scores.hits} / ${lockinData.scores.totalNonTargets}`, y);
+    y = drawRow('Misses (no tap)', String(lockinData.scores.misses), y);
+    y = drawRow('False alarms', `${lockinData.scores.falseAlarms} / ${lockinData.scores.totalTargets}`, y);
+    y = drawRow('Mean reaction time', `${lockinData.scores.meanRT}ms`, y);
+    y = drawRow('RT consistency (std dev)', `${lockinData.scores.rtStdDev}ms`, y);
+    if (lockinData.segments?.length >= 3) {
+      for (let i = 0; i < lockinData.segments.length; i++) {
+        const seg = lockinData.segments[i];
+        y = drawRow(`Stage ${i + 1} (${seg.range_seconds?.[0] || i * 30}–${seg.range_seconds?.[1] || (i + 1) * 30}s)`, `${(seg.accuracy * 100).toFixed(1)}% accuracy`, y);
+      }
+      y = drawRow('Degradation index', `${lockinData.degradationIndex > 0 ? '+' : ''}${lockinData.degradationIndex}%`, y);
+    }
+  } else {
+    y = drawRow('No detailed data', '', y);
+  }
+  y += 10;
+
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(w - margin, y); ctx.stroke();
+  y += 20;
+
+  // SHARPNESS
+  y = drawSectionHeader('SHARPNESS', sharpnessRaw, '#f59e0b', y);
+  if (sharpnessData) {
+    if (sharpnessData.dualTask) {
+      ctx.font = 'bold 14px "IBM Plex Sans", system-ui, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('DUAL TASK', margin + 20, y); y += 22;
+      y = drawRow('Visual baseline accuracy', `${(sharpnessData.dualTask.blockA.baselineAccuracy * 100).toFixed(1)}%`, y);
+      y = drawRow('Visual baseline hits', `${sharpnessData.dualTask.blockA.correctTaps} / ${sharpnessData.dualTask.blockA.evenStimuli}`, y);
+      y = drawRow('Auditory baseline accuracy', `${(sharpnessData.dualTask.blockB.baselineAccuracy * 100).toFixed(1)}%`, y);
+      y = drawRow('Auditory baseline hits', `${sharpnessData.dualTask.blockB.correctTaps} / ${sharpnessData.dualTask.blockB.highTones}`, y);
+      y = drawRow('Dual-task visual hits', `${sharpnessData.dualTask.blockC.visualCorrectTaps} / ${sharpnessData.dualTask.blockC.visualEvenStimuli}`, y);
+      y = drawRow('Dual-task auditory hits', `${sharpnessData.dualTask.blockC.auditoryCorrectTaps} / ${sharpnessData.dualTask.blockC.auditoryHighTones}`, y);
+      y = drawRow('Visual cost', `${(sharpnessData.dualTask.visualDualTaskCost * 100).toFixed(1)}%`, y);
+      y = drawRow('Auditory cost', `${(sharpnessData.dualTask.auditoryDualTaskCost * 100).toFixed(1)}%`, y);
+    }
+    if (sharpnessData.choiceRT) {
+      ctx.font = 'bold 14px "IBM Plex Sans", system-ui, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('CHOICE REACTION TIME', margin + 20, y); y += 22;
+      y = drawRow('Total trials', String(sharpnessData.choiceRT.totalTrials), y);
+      y = drawRow('Correct responses', `${sharpnessData.choiceRT.correctResponses} / ${sharpnessData.choiceRT.totalTrials}`, y);
+      y = drawRow('Compatible mean RT', `${sharpnessData.choiceRT.compatibleMeanRT}ms`, y);
+      y = drawRow('Incompatible mean RT', `${sharpnessData.choiceRT.incompatibleMeanRT}ms`, y);
+      y = drawRow('Simon Effect', `${sharpnessData.choiceRT.simonEffect}ms`, y);
+    }
+    if (sharpnessData.categorySwitch) {
+      ctx.font = 'bold 14px "IBM Plex Sans", system-ui, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('CATEGORY SWITCHING', margin + 20, y); y += 22;
+      y = drawRow('Total trials', String(sharpnessData.categorySwitch.totalTrials), y);
+      y = drawRow('Correct responses', `${sharpnessData.categorySwitch.correctResponses} / ${sharpnessData.categorySwitch.totalTrials}`, y);
+      y = drawRow('Switch trial accuracy', `${sharpnessData.categorySwitch.switchCorrect} / ${sharpnessData.categorySwitch.switchTrials}`, y);
+      y = drawRow('Stay trial accuracy', `${sharpnessData.categorySwitch.stayCorrect} / ${sharpnessData.categorySwitch.stayTrials}`, y);
+      y = drawRow('Switch cost (RT)', `${sharpnessData.categorySwitch.rtSwitchCost}ms`, y);
+    }
+  } else {
+    y = drawRow('No detailed data', '', y);
+  }
+
+  return y;
+}
+
 async function exportScoreCardPNG(
   result: BFSResult,
   participantId: string,
   participantName: string,
   sessionNumber: number,
+  sessionData?: any,
+  recallRaw?: number,
+  lockinRaw?: number,
+  sharpnessRaw?: number,
 ) {
+  // First pass: measure height needed for raw data
+  const measureCanvas = document.createElement('canvas');
+  measureCanvas.width = 1200;
+  measureCanvas.height = 4000;
+  const measureCtx = measureCanvas.getContext('2d')!;
+  const rawDataEndY = drawRawDataOnCanvas(measureCtx, 1200, 0, sessionData, recallRaw || 0, lockinRaw || 0, sharpnessRaw || 0);
+
   const canvas = document.createElement('canvas');
   const w = 1200;
-  const h = 1400;
+  const baseH = 950; // space for header + bars + message
+  const h = baseH + rawDataEndY + 80; // add raw data height + footer
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
@@ -337,7 +492,7 @@ async function exportScoreCardPNG(
   ctx.lineTo(w - 80, 195);
   ctx.stroke();
 
-  // Composite score - big center
+  // Composite score
   const compositeY = 320;
   const compositeColor = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
   ctx.font = 'bold 160px "Space Grotesk", system-ui, sans-serif';
@@ -349,7 +504,6 @@ async function exportScoreCardPNG(
   ctx.fillStyle = '#64748b';
   ctx.fillText('BFS COMPOSITE  /  100', w / 2, compositeY + 40);
 
-  // Target & gap
   ctx.font = '22px "IBM Plex Sans", system-ui, sans-serif';
   const gapColor = result.bfsGap >= 0 ? '#10b981' : '#ef4444';
   ctx.fillStyle = gapColor;
@@ -371,61 +525,34 @@ async function exportScoreCardPNG(
 
   pillars.forEach((p, i) => {
     const y = barStartY + i * barGap;
-
-    // Label
     ctx.font = 'bold 22px "Space Grotesk", system-ui, sans-serif';
     ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
     ctx.fillText(p.label, barMargin, y - 8);
-
-    // Score value
     ctx.textAlign = 'right';
     ctx.fillStyle = p.score >= 75 ? '#10b981' : '#ef4444';
     ctx.font = 'bold 28px "Space Grotesk", system-ui, sans-serif';
     ctx.fillText(String(p.score), w - barMargin, y - 8);
-
-    // Bar background
     ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.roundRect(barMargin, y, barW, barH, 8);
-    ctx.fill();
-
-    // Score fill
+    ctx.beginPath(); ctx.roundRect(barMargin, y, barW, barH, 8); ctx.fill();
     const fillW = (p.score / 100) * barW;
-    const barColor = p.score >= 75 ? '#10b981' : '#ef4444';
-    ctx.fillStyle = barColor;
-    ctx.beginPath();
-    ctx.roundRect(barMargin, y, fillW, barH, 8);
-    ctx.fill();
-
-    // Threshold line at 75
+    ctx.fillStyle = p.score >= 75 ? '#10b981' : '#ef4444';
+    ctx.beginPath(); ctx.roundRect(barMargin, y, fillW, barH, 8); ctx.fill();
     const threshX = barMargin + (75 / 100) * barW;
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(threshX, y - 4);
-    ctx.lineTo(threshX, y + barH + 4);
-    ctx.stroke();
-
-    // Threshold label
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(threshX, y - 4); ctx.lineTo(threshX, y + barH + 4); ctx.stroke();
     ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif';
-    ctx.fillStyle = '#22c55e';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = '#22c55e'; ctx.textAlign = 'center';
     ctx.fillText('MIN 75', threshX, y + barH + 18);
   });
 
   // Message
   const msgY = barStartY + 3 * barGap + 40;
   ctx.fillStyle = '#334155';
-  ctx.beginPath();
-  ctx.roundRect(barMargin, msgY, barW, 100, 12);
-  ctx.fill();
-
+  ctx.beginPath(); ctx.roundRect(barMargin, msgY, barW, 100, 12); ctx.fill();
   ctx.font = '20px "IBM Plex Sans", system-ui, sans-serif';
-  ctx.fillStyle = '#e2e8f0';
-  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e2e8f0'; ctx.textAlign = 'center';
   const msg = getBFSMessage(result.bfsStatus);
-  // Word wrap
   const words = msg.split(' ');
   let line = '';
   let lineY = msgY + 35;
@@ -433,25 +560,22 @@ async function exportScoreCardPNG(
   for (const word of words) {
     const test = line + word + ' ';
     if (ctx.measureText(test).width > maxLineW && line) {
-      ctx.fillText(line.trim(), w / 2, lineY);
-      line = word + ' ';
-      lineY += 28;
-    } else {
-      line = test;
-    }
+      ctx.fillText(line.trim(), w / 2, lineY); line = word + ' '; lineY += 28;
+    } else { line = test; }
   }
   ctx.fillText(line.trim(), w / 2, lineY);
 
-  // Status badge
-  const statusY = msgY + 130;
-  const statusLabel = result.bfsStatus === 'above_target' ? '🟢 ABOVE MINIMUM' : result.bfsStatus === 'at_target' ? '🟡 AT MINIMUM' : '🔴 BELOW MINIMUM';
-  ctx.font = 'bold 24px "Space Grotesk", system-ui, sans-serif';
-  ctx.fillStyle = result.bfsComposite >= 75 ? '#10b981' : '#ef4444';
-  ctx.fillText(statusLabel, w / 2, statusY);
+  // Separator before raw data
+  const rawStartY = msgY + 140;
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(barMargin, rawStartY); ctx.lineTo(w - barMargin, rawStartY); ctx.stroke();
+
+  // Draw raw performance data
+  drawRawDataOnCanvas(ctx, w, rawStartY + 30, sessionData, recallRaw || 0, lockinRaw || 0, sharpnessRaw || 0);
 
   // Footer
   ctx.font = '16px "IBM Plex Sans", system-ui, sans-serif';
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = '#475569'; ctx.textAlign = 'center';
   ctx.fillText('Reclaim Your Brain  |  Brain Fitness Score v2.0  |  reclaimyourbrain.com', w / 2, h - 40);
 
   // Download
