@@ -73,7 +73,7 @@ type DualTaskPhase = 'instrA' | 'blockA' | 'instrB' | 'blockB' | 'instrC' | 'blo
 export default function DualTaskComponent() {
   const { goToScreen, addBlockAResponse, addBlockBResponse, addBlockCResponse } = useSharpness();
   const [phase, setPhase] = useState<DualTaskPhase>('instrA');
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(10);
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [showDigit, setShowDigit] = useState(false);
   const [toneActive, setToneActive] = useState(false);
