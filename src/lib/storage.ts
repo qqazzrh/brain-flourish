@@ -136,9 +136,11 @@ export async function saveParticipant(p: ParticipantRecord) {
 
   const row = participantToDb(p);
   if (existing) {
-    await supabase.from('participants').update(row).eq('participant_id', p.participant_id);
+    const { error } = await supabase.from('participants').update(row).eq('participant_id', p.participant_id);
+    if (error) console.error('saveParticipant update error:', error);
   } else {
-    await supabase.from('participants').insert(row);
+    const { error } = await supabase.from('participants').insert(row);
+    if (error) console.error('saveParticipant insert error:', error);
   }
 }
 
