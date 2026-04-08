@@ -878,11 +878,27 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
   );
 }
 
-function generateScorePDF(result: BFSResult, sessionNumber: number, participantId: string, allScores: PillarScores[], ageBand: AgeBand, demandProfile: DemandProfile) {
+function generateScorePDF(result: BFSResult, sessionNumber: number, participantId: string, allScores: PillarScores[], ageBand: AgeBand, demandProfile: DemandProfile, sessionData?: any, recallRaw?: number, lockinRaw?: number, sharpnessRaw?: number) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const w = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 20;
   let y = 25;
+
+  const checkPage = (needed: number) => {
+    if (y + needed > pageH - 20) { doc.addPage(); y = 25; }
+  };
+
+  const pdfRow = (label: string, value: string) => {
+    checkPage(6);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(label, margin + 4, y);
+    doc.setTextColor(30);
+    doc.text(value, w - margin, y, { align: 'right' });
+    y += 5;
+  };
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -916,7 +932,6 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
     const color = p.score >= 75 ? [16, 185, 129] : [239, 68, 68];
     doc.setFillColor(color[0], color[1], color[2]);
     doc.roundedRect(margin, y, fillW, 8, 2, 2, 'F');
-    // Threshold line
     const threshX = margin + (75 / 100) * barW;
     doc.setDrawColor(34, 197, 94);
     doc.setLineWidth(0.5);
@@ -955,12 +970,128 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
   doc.text(msgLines, margin, y);
   y += msgLines.length * 5 + 10;
 
-  if (allScores.length > 1) {
+  // RAW PERFORMANCE DATA
+  const rd = sessionData?.recall_test_data;
+  const ld = sessionData?.lockin_test_data;
+  const sd = sessionData?.sharpness_test_data;
+
+  if (rd || ld || sd) {
+    checkPage(20);
     doc.setDrawColor(200);
     doc.line(margin, y, w - margin, y);
     y += 8;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30);
+    doc.text('RAW PERFORMANCE DATA', margin, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120);
+    doc.text('Actual test performance — no algorithms or percentiles', margin, y);
+    y += 8;
+
+    // RECALL
+    if (rd) {
+      checkPage(10);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text(`RECALL — ${recallRaw ?? ''}`, margin, y);
+      y += 6;
+      const totalUnits = (rd.units_recalled?.length || 0) + (rd.units_missed?.length || 0) || 20;
+      pdfRow('Units recalled', `${rd.raw_score} / ${totalUnits}`);
+      pdfRow('Units missed', String(rd.units_missed?.length || 0));
+      pdfRow('Distraction valid answers', `${rd.distraction_valid_count} in 90s`);
+      pdfRow('Distraction repeats', String(rd.distraction_invalid_count || 0));
+      pdfRow('Recall duration', `${rd.recall_duration_seconds}s`);
+      pdfRow('Prompt used', rd.one_time_prompt_used ? 'Yes' : 'No');
+      if (rd.category_scores) {
+        for (const [cat, cs] of Object.entries(rd.category_scores) as [string, any][]) {
+          pdfRow(`  ${cat.replace('_', ' ')}`, `${cs.score} / ${cs.max}`);
+        }
+      }
+      y += 4;
+    }
+
+    // LOCK-IN
+    if (ld?.scores) {
+      checkPage(10);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(139, 92, 246);
+      doc.text(`LOCK-IN — ${lockinRaw ?? ''}`, margin, y);
+      y += 6;
+      pdfRow('Total stimuli', String(ld.scores.totalNonTargets + ld.scores.totalTargets));
+      pdfRow('Hits (correct taps)', `${ld.scores.hits} / ${ld.scores.totalNonTargets}`);
+      pdfRow('Misses (no tap)', String(ld.scores.misses));
+      pdfRow('False alarms', `${ld.scores.falseAlarms} / ${ld.scores.totalTargets}`);
+      pdfRow('Mean reaction time', `${ld.scores.meanRT}ms`);
+      pdfRow('RT consistency (std dev)', `${ld.scores.rtStdDev}ms`);
+      if (ld.segments?.length >= 3) {
+        for (let i = 0; i < ld.segments.length; i++) {
+          const seg = ld.segments[i];
+          pdfRow(`Stage ${i + 1} (${seg.range_seconds?.[0] || i * 30}–${seg.range_seconds?.[1] || (i + 1) * 30}s)`, `${(seg.accuracy * 100).toFixed(1)}% accuracy`);
+        }
+        pdfRow('Degradation index', `${ld.degradationIndex > 0 ? '+' : ''}${ld.degradationIndex}%`);
+      }
+      y += 4;
+    }
+
+    // SHARPNESS
+    if (sd) {
+      checkPage(10);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(245, 158, 11);
+      doc.text(`SHARPNESS — ${sharpnessRaw ?? ''}`, margin, y);
+      y += 6;
+      if (sd.dualTask) {
+        checkPage(8);
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80);
+        doc.text('DUAL TASK', margin + 4, y); y += 5;
+        pdfRow('Visual baseline accuracy', `${(sd.dualTask.blockA.baselineAccuracy * 100).toFixed(1)}%`);
+        pdfRow('Visual baseline hits', `${sd.dualTask.blockA.correctTaps} / ${sd.dualTask.blockA.evenStimuli}`);
+        pdfRow('Auditory baseline accuracy', `${(sd.dualTask.blockB.baselineAccuracy * 100).toFixed(1)}%`);
+        pdfRow('Auditory baseline hits', `${sd.dualTask.blockB.correctTaps} / ${sd.dualTask.blockB.highTones}`);
+        pdfRow('Dual-task visual hits', `${sd.dualTask.blockC.visualCorrectTaps} / ${sd.dualTask.blockC.visualEvenStimuli}`);
+        pdfRow('Dual-task auditory hits', `${sd.dualTask.blockC.auditoryCorrectTaps} / ${sd.dualTask.blockC.auditoryHighTones}`);
+        pdfRow('Visual cost', `${(sd.dualTask.visualDualTaskCost * 100).toFixed(1)}%`);
+        pdfRow('Auditory cost', `${(sd.dualTask.auditoryDualTaskCost * 100).toFixed(1)}%`);
+      }
+      if (sd.choiceRT) {
+        checkPage(8);
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80);
+        doc.text('CHOICE REACTION TIME', margin + 4, y); y += 5;
+        pdfRow('Total trials', String(sd.choiceRT.totalTrials));
+        pdfRow('Correct responses', `${sd.choiceRT.correctResponses} / ${sd.choiceRT.totalTrials}`);
+        pdfRow('Compatible mean RT', `${sd.choiceRT.compatibleMeanRT}ms`);
+        pdfRow('Incompatible mean RT', `${sd.choiceRT.incompatibleMeanRT}ms`);
+        pdfRow('Simon Effect', `${sd.choiceRT.simonEffect}ms`);
+      }
+      if (sd.categorySwitch) {
+        checkPage(8);
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80);
+        doc.text('CATEGORY SWITCHING', margin + 4, y); y += 5;
+        pdfRow('Total trials', String(sd.categorySwitch.totalTrials));
+        pdfRow('Correct responses', `${sd.categorySwitch.correctResponses} / ${sd.categorySwitch.totalTrials}`);
+        pdfRow('Switch trial accuracy', `${sd.categorySwitch.switchCorrect} / ${sd.categorySwitch.switchTrials}`);
+        pdfRow('Stay trial accuracy', `${sd.categorySwitch.stayCorrect} / ${sd.categorySwitch.stayTrials}`);
+        pdfRow('Switch cost (RT)', `${sd.categorySwitch.rtSwitchCost}ms`);
+      }
+      y += 4;
+    }
+  }
+
+  // SCORE HISTORY
+  if (allScores.length > 1) {
+    checkPage(30);
+    doc.setDrawColor(200);
+    doc.line(margin, y, w - margin, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30);
     doc.text('SCORE HISTORY', margin, y);
     y += 8;
 
@@ -978,6 +1109,7 @@ function generateScorePDF(result: BFSResult, sessionNumber: number, participantI
 
     doc.setFont('helvetica', 'normal');
     for (const s of allScores) {
+      checkPage(8);
       const complete = s.recall_raw != null && s.lockin_raw != null && s.sharpness_raw != null;
       let bfs = '—';
       if (complete) {
