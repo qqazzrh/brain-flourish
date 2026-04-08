@@ -963,7 +963,7 @@ function ParticipantDisplay({ result, sessionNumber, participantId, participantN
   );
 }
 
-function generateScorePDF(result: BFSResult, sessionNumber: number, participantId: string, allScores: PillarScores[], ageBand: AgeBand, demandProfile: DemandProfile, sessionData?: any, recallRaw?: number, lockinRaw?: number, sharpnessRaw?: number) {
+export function generateScorePDF(result: BFSResult, sessionNumber: number, participantId: string, allScores: PillarScores[], ageBand: AgeBand, demandProfile: DemandProfile, sessionData?: any, recallRaw?: number, lockinRaw?: number, sharpnessRaw?: number) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const w = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
