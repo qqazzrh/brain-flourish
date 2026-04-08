@@ -14,6 +14,7 @@ export default function LockInPractice() {
   const [showDigit, setShowDigit] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [wrongFlash, setWrongFlash] = useState(false);
   const [started, setStarted] = useState(false);
   
   const sequenceRef = useRef(generateSequence(26, 0.10, 1)); // ~26 stimuli for 30s
@@ -57,6 +58,8 @@ export default function LockInPractice() {
     
     if (isTarget) {
       showFeedback({ type: 'false_alarm', message: 'Hold — that was 7 then 3' });
+      setWrongFlash(true);
+      setTimeout(() => setWrongFlash(false), 300);
     } else {
       showFeedback({ type: 'hit', message: 'Good' });
     }
@@ -123,7 +126,7 @@ export default function LockInPractice() {
     : 'text-destructive bg-destructive/10';
 
   return (
-    <div className="min-h-screen flex flex-col bg-background select-none" onClick={handleTap}>
+    <div className={`min-h-screen flex flex-col select-none transition-colors duration-150 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : 'bg-background'}`} onClick={handleTap}>
       {/* Header */}
       <div className="px-6 py-3 flex items-center justify-between border-b">
         <span className="text-display text-base text-warning">PRACTICE</span>
@@ -170,7 +173,7 @@ export default function LockInPractice() {
       </div>
 
       {/* Tap zone */}
-      <div className="h-[35vh] flex items-center justify-center border-t border-dashed border-border/50 mx-6 mb-6 rounded-xl bg-muted/30">
+      <div className={`h-[35vh] flex items-center justify-center border-t border-dashed mx-6 mb-6 rounded-xl transition-colors duration-150 ${wrongFlash ? 'border-red-500 bg-red-200/50 dark:bg-red-900/30' : 'border-border/50 bg-muted/30'}`}>
         <span className="text-lg text-muted-foreground font-medium">TAP HERE</span>
       </div>
     </div>
