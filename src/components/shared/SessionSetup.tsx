@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant, getAllPillarScoresForParticipant, PillarScores } from '@/lib/storage';
+import { generateParticipantId, findParticipant, saveParticipant, getNextFormForParticipant, getAllPillarScoresForParticipant, PillarScores, getSessionByParticipant } from '@/lib/storage';
 import {
   ParticipantRecord, ParticipantDemographics,
   AgeBand, Gender, EducationLevel, OccupationType, SeniorityLevel, DemandProfile,
 } from '@/lib/types';
-import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Play, Plus, Brain, Lock, Zap } from 'lucide-react';
+import { UserPlus, RotateCcw, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Play, Plus, Brain, Lock, Zap, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { computeBFS } from '@/lib/bfs-scoring';
+import { generateScorePDF } from '@/components/scoring/BFSScoring';
 
 type SubScreen = 'choice' | 'demographics' | 'new' | 'returning' | 'found' | 'not-found' | 'session-history';
 
