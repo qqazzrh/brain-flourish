@@ -63,7 +63,7 @@ export default function FacilitatorLogin() {
                 <SelectValue placeholder="Choose facilitator..." />
               </SelectTrigger>
               <SelectContent>
-                {FACILITATORS.filter(f => f.id !== 'FAC-005').map(f => (
+                {facilitators.filter(f => f.id !== 'FAC-005').map(f => (
                   <SelectItem key={f.id} value={f.id} className="text-base">{f.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -96,7 +96,7 @@ export default function FacilitatorLogin() {
           <Button
             variant="ghost"
             onClick={() => {
-              const pracFac = FACILITATORS.find(f => f.id === 'FAC-005')!;
+              const pracFac = facilitators.find(f => f.id === 'FAC-005') || { id: 'FAC-005', name: 'Practice Facilitator' };
               setFacilitator(pracFac, 'Practice Session');
               setPractice(true);
             }}
