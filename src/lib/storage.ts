@@ -185,20 +185,24 @@ export async function saveSession(session: any) {
     .eq('session_id', session.session_id)
     .maybeSingle();
 
-  const row = {
+  const row: any = {
     session_id: session.session_id,
     participant_id: session.participant_id,
     session_number: session.session_number || 1,
     facilitator_id: session.facilitator_id || '',
     location: session.location || '',
-    form_id: session.recall_test?.form_id || 'A',
+    form_id: session.recall_test?.form_id || session.form_id || 'A',
     timestamp_start: session.timestamp_start,
     timestamp_end: session.timestamp_end,
     session_duration_seconds: session.session_duration_seconds,
     practice: session.practice || false,
-    recall_done: session.recall_test != null,
-    recall_test_data: session.recall_test || null,
   };
+
+  // Only set flags that are explicitly provided (don't reset others)
+  if (session.recall_done != null) row.recall_done = session.recall_done;
+  if (session.recall_test != null) row.recall_test_data = session.recall_test;
+  if (session.lockin_done != null) row.lockin_done = session.lockin_done;
+  if (session.sharpness_done != null) row.sharpness_done = session.sharpness_done;
 
   if (existing) {
     const { error } = await supabase.from('sessions').update(row).eq('session_id', session.session_id);
