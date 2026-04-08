@@ -58,14 +58,23 @@ export default function CategorySwitchComponent() {
   useEffect(() => {
     async function load() {
       try {
-        const [pw, rw] = await Promise.all([
-          getWordTrials(10),
-          getWordTrials(30),
+        // Load trials for each rule type separately
+        const [m, l, s] = await Promise.all([
+          getWordTrials(10, 'meaning'),
+          getWordTrials(10, 'letter'),
+          getWordTrials(10, 'syllables'),
         ]);
-        setPracticeWords(pw);
-        setRealWords(rw);
+        // Interleave: groups of 3 (one per rule) to match the rule rotation
+        const interleaved: WordTrial[] = [];
+        const maxLen = Math.max(m.length, l.length, s.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (i < m.length) interleaved.push(m[i]);
+          if (i < l.length) interleaved.push(l[i]);
+          if (i < s.length) interleaved.push(s[i]);
+        }
+        setPracticeWords(interleaved.slice(0, 12));
+        setRealWords(interleaved);
       } catch {
-        // Fallback to hardcoded
         const { getShuffledWordSet } = await import('@/lib/word-library');
         setPracticeWords(getShuffledWordSet(10));
         setRealWords(getShuffledWordSet(30));
