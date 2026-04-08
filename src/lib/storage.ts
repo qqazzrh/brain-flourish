@@ -223,8 +223,16 @@ export async function getSessionByParticipant(participantId: string, sessionNumb
     .eq('participant_id', participantId)
     .eq('session_number', sessionNumber)
     .eq('practice', false)
-    .maybeSingle();
-  return data || null;
+    .order('created_at', { ascending: false });
+  if (!data || data.length === 0) return null;
+  // Merge test data from all session rows (data may be split across rows)
+  const merged = { ...data[0] };
+  for (const row of data) {
+    if (row.recall_test_data && !merged.recall_test_data) merged.recall_test_data = row.recall_test_data;
+    if (row.lockin_test_data && !merged.lockin_test_data) merged.lockin_test_data = row.lockin_test_data;
+    if (row.sharpness_test_data && !merged.sharpness_test_data) merged.sharpness_test_data = row.sharpness_test_data;
+  }
+  return merged;
 }
 
 export async function generateSessionId(): Promise<string> {
