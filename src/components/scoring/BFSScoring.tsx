@@ -107,7 +107,7 @@ export default function BFSScoring() {
         {screen === 'input' && (
           <motion.div key="input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-display text-2xl text-foreground">BFS Scoring</h2>
+              <h2 className="text-display text-2xl text-foreground">Brain Score</h2>
               <p className="text-sm text-muted-foreground">Session {sessionNum} scores for {participant?.participant_id || 'participant'}</p>
             </div>
 
