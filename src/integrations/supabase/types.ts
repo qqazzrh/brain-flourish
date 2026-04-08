@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      facilitators: {
+        Row: {
+          created_at: string
+          email: string
+          facilitator_id: string
+          id: string
+          name: string
+          pin: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          facilitator_id: string
+          id?: string
+          name: string
+          pin?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          facilitator_id?: string
+          id?: string
+          name?: string
+          pin?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       participant_id_counter: {
         Row: {
           id: number
