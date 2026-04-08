@@ -1,14 +1,20 @@
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { PASSAGE_FORMS, FORM_DOMAINS } from '@/lib/content-library';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
 
 export default function RecallIntro() {
   const { goToScreen } = useRecall();
-  const { assignedForm } = useSession();
-  const passage = PASSAGE_FORMS[assignedForm];
+  const { assignedForm, passage, formDomain, contentLoading } = useSession();
+
+  if (contentLoading || !passage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
@@ -31,7 +37,7 @@ export default function RecallIntro() {
         <div className="card-sunken p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Form</span>
-            <span className="font-medium text-foreground">{assignedForm} — {FORM_DOMAINS[assignedForm]}</span>
+            <span className="font-medium text-foreground">{assignedForm} — {formDomain}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Word count</span>

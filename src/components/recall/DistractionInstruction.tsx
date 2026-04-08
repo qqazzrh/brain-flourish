@@ -1,13 +1,20 @@
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
-import { DISTRACTION_OPTIONS } from '@/lib/distraction-options';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
 export default function DistractionInstruction() {
   const { goToScreen, setDistractionTimerStart } = useRecall();
-  const { assignedForm } = useSession();
-  const optionSet = DISTRACTION_OPTIONS[assignedForm];
+  const { distractionOptionSet, contentLoading } = useSession();
+
+  if (contentLoading || !distractionOptionSet) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleStartTimer = () => {
     setDistractionTimerStart(new Date().toISOString());
@@ -27,7 +34,7 @@ export default function DistractionInstruction() {
 
         <div className="card-elevated p-8 space-y-4">
           <p className="text-2xl leading-relaxed text-foreground">
-            "{optionSet.instruction}"
+            "{distractionOptionSet.instruction}"
           </p>
         </div>
 
