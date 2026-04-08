@@ -36,9 +36,13 @@ const SENIORITY_LEVELS: { value: SeniorityLevel; label: string }[] = [
   { value: 'senior', label: 'Senior' }, { value: 'executive', label: 'Executive' }, { value: 'not-applicable', label: 'Not Applicable' },
 ];
 
-function deriveDemandProfile(occupation: OccupationType, seniority: SeniorityLevel): DemandProfile {
+function deriveDemandProfile(occupation: OccupationType, seniority: SeniorityLevel, education?: EducationLevel): DemandProfile {
   if (occupation === 'knowledge-worker' && (seniority === 'senior' || seniority === 'executive')) return 'HIGH';
   if (occupation === 'knowledge-worker' || occupation === 'creative') return 'MODERATE';
+  if (occupation === 'student') {
+    if (education === 'masters' || education === 'doctorate') return 'HIGH';
+    if (education === 'bachelors' || education === 'some-college') return 'MODERATE';
+  }
   return 'LOWER';
 }
 
@@ -66,7 +70,7 @@ export default function SessionSetup() {
     if (!demographicsValid || loading) return;
     setLoading(true);
 
-    const demandProfile = deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel);
+    const demandProfile = deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel, dEducation as EducationLevel);
     const demographics: ParticipantDemographics = {
       name: dName.trim(), age_band: dAge as AgeBand, gender: dGender as Gender,
       education_level: dEducation as EducationLevel, occupation_type: dOccupation as OccupationType,
@@ -189,7 +193,7 @@ export default function SessionSetup() {
             {dOccupation && dSeniority && (
               <div className="card-sunken p-3 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Demand Profile</span>
-                <span className="text-display text-sm text-primary">{deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel)}</span>
+                <span className="text-display text-sm text-primary">{deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel, dEducation as EducationLevel)}</span>
               </div>
             )}
             <Button variant="hero" size="xl" className="w-full" disabled={!demographicsValid || loading} onClick={handleCreateWithDemographics}>
