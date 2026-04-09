@@ -19,6 +19,9 @@ export default function LockInHandoff() {
             "The next test measures how well your brain can stay focused and resist distraction.
           </p>
           <p className="text-2xl leading-relaxed text-foreground">
+            There are two short rounds. The second round is harder than the first.
+          </p>
+          <p className="text-2xl leading-relaxed text-foreground">
             You'll be tapping the screen directly this time. I'll hand you the tablet and the instructions will guide you from there.
           </p>
           <p className="text-2xl leading-relaxed text-foreground">

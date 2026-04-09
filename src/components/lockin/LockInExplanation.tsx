@@ -8,7 +8,10 @@ export default function LockInExplanation() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
       <div className="w-full max-w-lg space-y-8">
-        <h1 className="text-display text-3xl text-foreground text-center">LOCK-IN TEST</h1>
+        <div className="text-center space-y-2">
+          <h1 className="text-display text-3xl text-foreground">LOCK-IN TEST</h1>
+          <p className="text-sm text-muted-foreground">Round 1 of 2</p>
+        </div>
 
         <div className="space-y-6 text-center">
           <p className="text-xl text-foreground leading-relaxed">
@@ -37,11 +40,12 @@ export default function LockInExplanation() {
         <div className="card-sunken p-4 space-y-2 text-center">
           <p className="text-base text-foreground">Tap for everything.</p>
           <p className="text-base text-foreground">Hold back only for <span className="font-bold">3</span> after <span className="font-bold">7</span>.</p>
+          <p className="text-sm text-muted-foreground mt-2">⚡ Note: You'll see many 3s — only hold back when a 3 comes right after a 7.</p>
         </div>
 
         <div className="space-y-3">
           <Button variant="hero" size="xl" className="w-full" onClick={() => goToScreen(2)}>
-            Start Test
+            Start Round 1
           </Button>
         </div>
       </div>
