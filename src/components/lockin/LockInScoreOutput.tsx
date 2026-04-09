@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLockIn } from '@/contexts/LockInContext';
 import { useSession } from '@/contexts/SessionContext';
-import { computeLockInScore, computeSegments } from '@/lib/stimulus-engine';
+import { computeLockInScore, computeCombinedLockInScore, computeSegments } from '@/lib/stimulus-engine';
 import { savePillarScore, saveParticipant, saveSession } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -16,17 +16,29 @@ export default function LockInScoreOutput() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const scores = useMemo(() => computeLockInScore(state.responseLog), [state.responseLog]);
-  const segments = useMemo(() => computeSegments(
+  const combined = useMemo(() => computeCombinedLockInScore(state.responseLog, state.responseLog2), [state.responseLog, state.responseLog2]);
+  const g1 = combined.game1;
+  const g2 = combined.game2;
+
+  const segments1 = useMemo(() => computeSegments(
     state.responseLog.map((r, i) => ({ ...r, stimulus_index: i })),
     state.responseLog.length, 3
   ), [state.responseLog]);
 
-  const degradationIndex = segments.length >= 3
-    ? Math.round((segments[2].accuracy - segments[0].accuracy) * 1000) / 10 : 0;
+  const segments2 = useMemo(() => computeSegments(
+    state.responseLog2.map((r, i) => ({ ...r, stimulus_index: i })),
+    state.responseLog2.length, 3
+  ), [state.responseLog2]);
 
-  const testDuration = state.testStartTime && state.testEndTime
+  const degradationIndex1 = segments1.length >= 3
+    ? Math.round((segments1[2].accuracy - segments1[0].accuracy) * 1000) / 10 : 0;
+  const degradationIndex2 = segments2.length >= 3
+    ? Math.round((segments2[2].accuracy - segments2[0].accuracy) * 1000) / 10 : 0;
+
+  const testDuration1 = state.testStartTime && state.testEndTime
     ? Math.round((new Date(state.testEndTime).getTime() - new Date(state.testStartTime).getTime()) / 1000) : 0;
+  const testDuration2 = state.testStartTime2 && state.testEndTime2
+    ? Math.round((new Date(state.testEndTime2).getTime() - new Date(state.testStartTime2).getTime()) / 1000) : 0;
 
   const handleSave = async () => {
     if (saving) return;
@@ -39,25 +51,33 @@ export default function LockInScoreOutput() {
       }
 
       await savePillarScore(participant.participant_id, currentSessionNumber, {
-        lockin_raw: scores.pillarScore,
-        lockin_degradation_index: degradationIndex,
+        lockin_raw: combined.combinedPillarScore,
+        lockin_degradation_index: degradationIndex1,
       });
 
-      // Update session record to mark lockin as done
       const sessionId = `${participant.participant_id}-S${currentSessionNumber}`;
       await saveSession({
         session_id: sessionId,
         participant_id: participant.participant_id,
         session_number: currentSessionNumber,
         timestamp_start: state.testStartTime || new Date().toISOString(),
-        timestamp_end: state.testEndTime || new Date().toISOString(),
+        timestamp_end: state.testEndTime2 || state.testEndTime || new Date().toISOString(),
         lockin_done: true,
         lockin_test_data: {
-          responseLog: state.responseLog,
+          game1: {
+            responseLog: state.responseLog,
+            scores: g1,
+            segments: segments1,
+            degradationIndex: degradationIndex1,
+          },
+          game2: {
+            responseLog: state.responseLog2,
+            scores: g2,
+            segments: segments2,
+            degradationIndex: degradationIndex2,
+          },
+          combinedPillarScore: combined.combinedPillarScore,
           interruptionFlags: state.interruptionFlags,
-          scores,
-          segments,
-          degradationIndex,
         },
         practice: isPractice,
       });
@@ -90,40 +110,44 @@ export default function LockInScoreOutput() {
           {isPractice && <span className="inline-block px-3 py-1 bg-warning/10 text-warning text-sm rounded-full font-medium">Practice</span>}
         </div>
 
-        <div className="card-elevated p-5 space-y-2">
-          <InfoRow label="Participant" value={participant?.participant_id || ''} />
-          <InfoRow label="Session" value={`Session ${currentSessionNumber}`} />
-          <InfoRow label="Test duration" value={`${Math.floor(testDuration / 60)} min ${testDuration % 60} sec`} />
-          <InfoRow label="Total stimuli" value={String(state.responseLog.length)} />
-        </div>
-
-        <div className="card-elevated p-5 space-y-3">
-          <h3 className="text-display text-base text-foreground">RAW METRICS</h3>
-          <InfoRow label="Hits" value={`${scores.hits} / ${scores.totalNonTargets} (${scores.hitRate > 0 ? (scores.hitRate * 100).toFixed(1) : 0}%)`} />
-          <InfoRow label="Misses" value={`${scores.misses} / ${scores.totalNonTargets} (${scores.totalNonTargets > 0 ? ((scores.misses / scores.totalNonTargets) * 100).toFixed(1) : 0}%)`} />
-          <InfoRow label="False Alarms" value={`${scores.falseAlarms} / ${scores.totalTargets} (${scores.faRate > 0 ? (scores.faRate * 100).toFixed(1) : 0}%)`} />
-          <InfoRow label="Mean RT" value={`${scores.meanRT}ms`} />
-          <InfoRow label="RT Std Dev" value={`${scores.rtStdDev}ms`} />
-        </div>
-
+        {/* Combined Score */}
         <div className="card-elevated p-8 text-center space-y-4">
-          <p className="text-sm text-muted-foreground uppercase tracking-wider">Lock-In Pillar Score</p>
-          <p className="text-display text-6xl text-primary">{scores.pillarScore}<span className="text-2xl text-muted-foreground"> / 100</span></p>
+          <p className="text-sm text-muted-foreground uppercase tracking-wider">Combined Lock-In Score</p>
+          <p className="text-display text-6xl text-primary">{combined.combinedPillarScore}<span className="text-2xl text-muted-foreground"> / 100</span></p>
           <div className="flex justify-center gap-6 text-xs text-muted-foreground">
-            <span>Accuracy: {scores.accuracySubScore}</span>
-            <span>Inhibition: {scores.inhibitionSubScore}</span>
-            <span>Consistency: {scores.consistencySubScore}</span>
+            <span>Round 1: {g1.pillarScore}/100</span>
+            <span>Round 2: {g2.pillarScore}/100</span>
           </div>
+          <p className="text-xs text-muted-foreground">(40% Round 1 + 60% Round 2)</p>
         </div>
 
+        {/* Game 1 Details */}
         <div className="card-elevated p-5 space-y-3">
-          <h3 className="text-display text-base text-foreground">DEGRADATION CURVE</h3>
-          {segments.map((seg, i) => (
-            <InfoRow key={i} label={`Segment ${i + 1} (${seg.range_seconds[0]}-${seg.range_seconds[1]}s)`} value={`${(seg.accuracy * 100).toFixed(1)}% accuracy`} />
-          ))}
-          <div className="border-t pt-2">
-            <InfoRow label="Degradation index" value={`${degradationIndex > 0 ? '+' : ''}${degradationIndex}%`} />
-          </div>
+          <h3 className="text-display text-base text-foreground">ROUND 1 — Withhold 7→3</h3>
+          <InfoRow label="Duration" value={`${Math.floor(testDuration1 / 60)}m ${testDuration1 % 60}s`} />
+          <InfoRow label="Stimuli" value={String(state.responseLog.length)} />
+          <InfoRow label="Hits" value={`${g1.hits}/${g1.totalNonTargets} (${(g1.hitRate * 100).toFixed(1)}%)`} />
+          <InfoRow label="False Alarms" value={`${g1.falseAlarms}/${g1.totalTargets} (${(g1.faRate * 100).toFixed(1)}%)`} />
+          <InfoRow label="Mean RT" value={`${g1.meanRT}ms`} />
+          <InfoRow label="Score" value={`${g1.pillarScore}/100`} />
+        </div>
+
+        {/* Game 2 Details */}
+        <div className="card-elevated p-5 space-y-3">
+          <h3 className="text-display text-base text-foreground">ROUND 2 — Withhold 7→3 &amp; 6→5</h3>
+          <InfoRow label="Duration" value={`${Math.floor(testDuration2 / 60)}m ${testDuration2 % 60}s`} />
+          <InfoRow label="Stimuli" value={String(state.responseLog2.length)} />
+          <InfoRow label="Hits" value={`${g2.hits}/${g2.totalNonTargets} (${(g2.hitRate * 100).toFixed(1)}%)`} />
+          <InfoRow label="False Alarms" value={`${g2.falseAlarms}/${g2.totalTargets} (${(g2.faRate * 100).toFixed(1)}%)`} />
+          <InfoRow label="Mean RT" value={`${g2.meanRT}ms`} />
+          <InfoRow label="Score" value={`${g2.pillarScore}/100`} />
+        </div>
+
+        {/* Degradation */}
+        <div className="card-elevated p-5 space-y-3">
+          <h3 className="text-display text-base text-foreground">DEGRADATION</h3>
+          <InfoRow label="Round 1 degradation" value={`${degradationIndex1 > 0 ? '+' : ''}${degradationIndex1}%`} />
+          <InfoRow label="Round 2 degradation" value={`${degradationIndex2 > 0 ? '+' : ''}${degradationIndex2}%`} />
         </div>
 
         {state.interruptionFlags.length > 0 && (
@@ -137,7 +161,7 @@ export default function LockInScoreOutput() {
 
         <div className="card-sunken p-5 space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Say to Participant:</p>
-          <p className="text-lg text-foreground leading-relaxed">"Your Lock-In score is {scores.pillarScore} out of 100."</p>
+          <p className="text-lg text-foreground leading-relaxed">"Your Lock-In score is {combined.combinedPillarScore} out of 100."</p>
         </div>
 
         <div className="flex gap-3">
