@@ -347,20 +347,29 @@ function drawRawDataOnCanvas(ctx: CanvasRenderingContext2D, w: number, startY: n
 
   // LOCK-IN
   y = drawSectionHeader('LOCK-IN', lockinRaw, '#8b5cf6', y);
-  if (lockinData?.scores) {
+  if (lockinData?.game1?.scores) {
+    // New dual-game format
+    const drawGameSection = (label: string, g: any, yStart: number) => {
+      let yy = yStart;
+      ctx.font = 'bold 14px "IBM Plex Sans", system-ui, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, margin + 20, yy); yy += 22;
+      yy = drawRow('Hits', `${g.scores.hits} / ${g.scores.totalNonTargets}`, yy);
+      yy = drawRow('False alarms', `${g.scores.falseAlarms} / ${g.scores.totalTargets}`, yy);
+      yy = drawRow('Mean RT', `${g.scores.meanRT}ms`, yy);
+      yy = drawRow('Score', `${g.scores.pillarScore}/100`, yy);
+      return yy;
+    };
+    y = drawGameSection('ROUND 1 — Withhold 7→3', lockinData.game1, y);
+    y = drawGameSection('ROUND 2 — Withhold 7→3 & 6→5', lockinData.game2, y);
+    y = drawRow('Combined (40/60)', `${lockinData.combinedPillarScore}/100`, y);
+  } else if (lockinData?.scores) {
+    // Legacy single-game format
     y = drawRow('Total stimuli', String(lockinData.scores.totalNonTargets + lockinData.scores.totalTargets), y);
     y = drawRow('Hits (correct taps)', `${lockinData.scores.hits} / ${lockinData.scores.totalNonTargets}`, y);
-    y = drawRow('Misses (no tap)', String(lockinData.scores.misses), y);
     y = drawRow('False alarms', `${lockinData.scores.falseAlarms} / ${lockinData.scores.totalTargets}`, y);
     y = drawRow('Mean reaction time', `${lockinData.scores.meanRT}ms`, y);
-    y = drawRow('RT consistency (std dev)', `${lockinData.scores.rtStdDev}ms`, y);
-    if (lockinData.segments?.length >= 3) {
-      for (let i = 0; i < lockinData.segments.length; i++) {
-        const seg = lockinData.segments[i];
-        y = drawRow(`Stage ${i + 1} (${seg.range_seconds?.[0] || i * 30}–${seg.range_seconds?.[1] || (i + 1) * 30}s)`, `${(seg.accuracy * 100).toFixed(1)}% accuracy`, y);
-      }
-      y = drawRow('Degradation index', `${lockinData.degradationIndex > 0 ? '+' : ''}${lockinData.degradationIndex}%`, y);
-    }
   } else {
     y = drawRow('No detailed data', '', y);
   }
@@ -658,37 +667,29 @@ function RawBreakdown({ sessionData, recallRaw, lockinRaw, sharpnessRaw }: {
         {expanded === 'lockin' && lockinData && (
           <div className="px-4 pb-4 space-y-2 border-t">
             <div className="pt-3 space-y-1.5">
-              {lockinData.scores && (
+              {lockinData.game1?.scores ? (
                 <>
-                  <InfoRow label="Total stimuli" value={String(lockinData.scores.totalNonTargets + lockinData.scores.totalTargets)} />
-                  <InfoRow label="Hits (correct taps)" value={`${lockinData.scores.hits} / ${lockinData.scores.totalNonTargets}`} />
-                  <InfoRow label="Misses (no tap)" value={String(lockinData.scores.misses)} />
-                  <InfoRow label="False alarms (tapped on 7→3)" value={`${lockinData.scores.falseAlarms} / ${lockinData.scores.totalTargets}`} />
-                  <InfoRow label="Mean reaction time" value={`${lockinData.scores.meanRT}ms`} />
-                  <InfoRow label="RT consistency (std dev)" value={`${lockinData.scores.rtStdDev}ms`} />
+                  <p className="text-xs text-muted-foreground font-medium">Round 1 — Withhold 7→3</p>
+                  <InfoRow label="Hits" value={`${lockinData.game1.scores.hits} / ${lockinData.game1.scores.totalNonTargets}`} />
+                  <InfoRow label="False alarms" value={`${lockinData.game1.scores.falseAlarms} / ${lockinData.game1.scores.totalTargets}`} />
+                  <InfoRow label="Mean RT" value={`${lockinData.game1.scores.meanRT}ms`} />
+                  <InfoRow label="Round 1 score" value={`${lockinData.game1.scores.pillarScore}/100`} />
+                  <div className="border-t pt-2 mt-2" />
+                  <p className="text-xs text-muted-foreground font-medium">Round 2 — Withhold 7→3 & 6→5</p>
+                  <InfoRow label="Hits" value={`${lockinData.game2.scores.hits} / ${lockinData.game2.scores.totalNonTargets}`} />
+                  <InfoRow label="False alarms" value={`${lockinData.game2.scores.falseAlarms} / ${lockinData.game2.scores.totalTargets}`} />
+                  <InfoRow label="Mean RT" value={`${lockinData.game2.scores.meanRT}ms`} />
+                  <InfoRow label="Round 2 score" value={`${lockinData.game2.scores.pillarScore}/100`} />
+                  <div className="border-t pt-2 mt-2" />
+                  <InfoRow label="Combined (40/60)" value={`${lockinData.combinedPillarScore}/100`} />
                 </>
-              )}
-              {lockinData.segments && lockinData.segments.length >= 3 && (
-                <div className="border-t pt-2 mt-2 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Performance by 30-second stage:</p>
-                  {lockinData.segments.map((seg: any, i: number) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Stage {i + 1} ({seg.range_seconds?.[0] || i * 30}–{seg.range_seconds?.[1] || (i + 1) * 30}s)
-                      </span>
-                      <span className="text-foreground font-medium">
-                        {(seg.accuracy * 100).toFixed(1)}% accuracy
-                      </span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-sm border-t pt-1">
-                    <span className="text-muted-foreground">Degradation index</span>
-                    <span className={`font-medium ${lockinData.degradationIndex < 0 ? 'text-destructive' : 'text-success'}`}>
-                      {lockinData.degradationIndex > 0 ? '+' : ''}{lockinData.degradationIndex}%
-                    </span>
-                  </div>
-                </div>
-              )}
+              ) : lockinData.scores ? (
+                <>
+                  <InfoRow label="Hits" value={`${lockinData.scores.hits} / ${lockinData.scores.totalNonTargets}`} />
+                  <InfoRow label="False alarms" value={`${lockinData.scores.falseAlarms} / ${lockinData.scores.totalTargets}`} />
+                  <InfoRow label="Mean RT" value={`${lockinData.scores.meanRT}ms`} />
+                </>
+              ) : null}
               {lockinData.interruptionFlags?.length > 0 && (
                 <div className="border-t pt-2 mt-2">
                   <InfoRow label="Interruptions flagged" value={String(lockinData.interruptionFlags.length)} />
@@ -1144,26 +1145,38 @@ export function generateScorePDF(result: BFSResult, sessionNumber: number, parti
     }
 
     // LOCK-IN
-    if (ld?.scores) {
+    if (ld?.game1?.scores) {
       checkPage(10);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(139, 92, 246);
       doc.text(`LOCK-IN — ${lockinRaw ?? ''}`, margin, y);
       y += 6;
-      pdfRow('Total stimuli', String(ld.scores.totalNonTargets + ld.scores.totalTargets));
-      pdfRow('Hits (correct taps)', `${ld.scores.hits} / ${ld.scores.totalNonTargets}`);
-      pdfRow('Misses (no tap)', String(ld.scores.misses));
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80);
+      doc.text('ROUND 1 — Withhold 7→3', margin + 4, y); y += 5;
+      pdfRow('Hits', `${ld.game1.scores.hits} / ${ld.game1.scores.totalNonTargets}`);
+      pdfRow('False alarms', `${ld.game1.scores.falseAlarms} / ${ld.game1.scores.totalTargets}`);
+      pdfRow('Mean RT', `${ld.game1.scores.meanRT}ms`);
+      pdfRow('Round 1 score', `${ld.game1.scores.pillarScore}/100`);
+      checkPage(8);
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80);
+      doc.text('ROUND 2 — Withhold 7→3 & 6→5', margin + 4, y); y += 5;
+      pdfRow('Hits', `${ld.game2.scores.hits} / ${ld.game2.scores.totalNonTargets}`);
+      pdfRow('False alarms', `${ld.game2.scores.falseAlarms} / ${ld.game2.scores.totalTargets}`);
+      pdfRow('Mean RT', `${ld.game2.scores.meanRT}ms`);
+      pdfRow('Round 2 score', `${ld.game2.scores.pillarScore}/100`);
+      pdfRow('Combined (40/60)', `${ld.combinedPillarScore}/100`);
+      y += 4;
+    } else if (ld?.scores) {
+      checkPage(10);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(139, 92, 246);
+      doc.text(`LOCK-IN — ${lockinRaw ?? ''}`, margin, y);
+      y += 6;
+      pdfRow('Hits', `${ld.scores.hits} / ${ld.scores.totalNonTargets}`);
       pdfRow('False alarms', `${ld.scores.falseAlarms} / ${ld.scores.totalTargets}`);
-      pdfRow('Mean reaction time', `${ld.scores.meanRT}ms`);
-      pdfRow('RT consistency (std dev)', `${ld.scores.rtStdDev}ms`);
-      if (ld.segments?.length >= 3) {
-        for (let i = 0; i < ld.segments.length; i++) {
-          const seg = ld.segments[i];
-          pdfRow(`Stage ${i + 1} (${seg.range_seconds?.[0] || i * 30}–${seg.range_seconds?.[1] || (i + 1) * 30}s)`, `${(seg.accuracy * 100).toFixed(1)}% accuracy`);
-        }
-        pdfRow('Degradation index', `${ld.degradationIndex > 0 ? '+' : ''}${ld.degradationIndex}%`);
-      }
+      pdfRow('Mean RT', `${ld.scores.meanRT}ms`);
       y += 4;
     }
 
