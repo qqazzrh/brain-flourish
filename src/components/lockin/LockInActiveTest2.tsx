@@ -5,10 +5,10 @@ import { generateSequence } from '@/lib/stimulus-engine';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TOTAL_STIMULI = 182;
-const TEST_DURATION = 120; // 2 minutes for Game 1
+const TEST_DURATION = 120; // 2 minutes for Game 2
 
-export default function LockInActiveTest() {
-  const { goToScreen, setSequence, addResponse, setTestStartTime, setTestEndTime } = useLockIn();
+export default function LockInActiveTest2() {
+  const { goToScreen, setSequence2, addResponse2, setTestStartTime2, setTestEndTime2 } = useLockIn();
   const { isPractice } = useSession();
   const actualDuration = isPractice ? 60 : TEST_DURATION;
   const actualStimuli = isPractice ? 52 : TOTAL_STIMULI;
@@ -20,7 +20,8 @@ export default function LockInActiveTest() {
   const [tapFlash, setTapFlash] = useState(false);
   const [wrongFlash, setWrongFlash] = useState(false);
 
-  const sequenceRef = useRef(generateSequence(actualStimuli, 0.10, 3, 'single'));
+  // Dual mode: both 7→3 and 6→5
+  const sequenceRef = useRef(generateSequence(actualStimuli, 0.12, 3, 'dual'));
   const indexRef = useRef(0);
   const stimulusOnsetRef = useRef<number>(0);
   const stimulusOnsetISORef = useRef<string>('');
@@ -30,8 +31,8 @@ export default function LockInActiveTest() {
   const testOverRef = useRef(false);
 
   const logResponse = useCallback((entry: StimulusLogEntry) => {
-    addResponse(entry);
-  }, [addResponse]);
+    addResponse2(entry);
+  }, [addResponse2]);
 
   const processResponse = useCallback(() => {
     if (testOverRef.current) return;
@@ -108,17 +109,16 @@ export default function LockInActiveTest() {
     testOverRef.current = true;
     if (cycleRef.current) clearTimeout(cycleRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
-    setTestEndTime(new Date().toISOString());
-    // Go to Game 2 explanation
-    setTimeout(() => goToScreen(3), 1000);
-  }, [goToScreen, setTestEndTime]);
+    setTestEndTime2(new Date().toISOString());
+    setTimeout(() => goToScreen(5), 1000);
+  }, [goToScreen, setTestEndTime2]);
 
   useEffect(() => {
     if (!started) return;
     
     const seq = sequenceRef.current;
-    setSequence(seq.seed, seq.digits, seq.targetIndices);
-    setTestStartTime(new Date().toISOString());
+    setSequence2(seq.seed, seq.digits, seq.targetIndices);
+    setTestStartTime2(new Date().toISOString());
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -152,7 +152,7 @@ export default function LockInActiveTest() {
     >
       {/* Header */}
       <div className="px-6 py-3 flex justify-between items-center">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Round 1 — Withhold 7→3</span>
+        <span className="text-xs font-medium text-destructive uppercase tracking-wider">Round 2 — Withhold 7→3 &amp; 6→5</span>
         <span className="text-sm md:text-base font-mono text-muted-foreground">
           {mins}:{String(secs).padStart(2, '0')}
         </span>
