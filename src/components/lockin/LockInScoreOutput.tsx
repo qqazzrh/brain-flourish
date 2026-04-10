@@ -40,8 +40,10 @@ export default function LockInScoreOutput() {
   const testDuration2 = state.testStartTime2 && state.testEndTime2
     ? Math.round((new Date(state.testEndTime2).getTime() - new Date(state.testStartTime2).getTime()) / 1000) : 0;
 
-  const handleSave = async () => {
-    if (saving) return;
+  const autoSaveAttempted = useRef(false);
+
+  const doSave = async () => {
+    if (saving || saved) return;
     setSaving(true);
 
     try {
@@ -98,6 +100,16 @@ export default function LockInScoreOutput() {
       setSaving(false);
     }
   };
+
+  // Auto-save on mount to prevent data loss
+  useEffect(() => {
+    if (!autoSaveAttempted.current && participant && !saved) {
+      autoSaveAttempted.current = true;
+      doSave();
+    }
+  }, [participant]);
+
+  const handleSave = () => doSave();
 
   const handleNextOrHub = () => { resetLockIn(); navigate('/'); };
 
