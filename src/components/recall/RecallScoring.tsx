@@ -60,7 +60,7 @@ export default function RecallScoring() {
 
   if (contentLoading || !passage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -70,7 +70,7 @@ export default function RecallScoring() {
   const totalRecalled = state.recalledUnits.size;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col bg-background">
       <div className="sticky top-0 z-10 bg-background border-b px-6 py-3">
         <div className="flex items-center justify-between max-w-3xl mx-auto">
           <div>

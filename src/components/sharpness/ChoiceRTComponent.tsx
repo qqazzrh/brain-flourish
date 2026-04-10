@@ -218,7 +218,7 @@ export default function ChoiceRTComponent() {
   // Instructions screen
   if (phase === 'instructions') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 2 — REACTION SPEED</p>
           <div className="card-elevated p-6 space-y-4 text-left">
@@ -260,7 +260,7 @@ export default function ChoiceRTComponent() {
   // Practice complete screen
   if (phase === 'practiceComplete') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 2 — REACTION SPEED</p>
           <div className="card-elevated p-6 space-y-3">

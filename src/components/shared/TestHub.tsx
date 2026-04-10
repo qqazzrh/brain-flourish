@@ -32,7 +32,7 @@ export default function TestHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <header className="px-6 py-5 border-b">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
