@@ -312,7 +312,7 @@ export default function DualTaskComponent() {
             <p className="text-base text-foreground">Do NOT tap for odd numbers.</p>
           </div>
           <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockA'); startBlock('blockA'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockA'); startBlock('blockA'); }}>
             I'm ready — Start
           </Button>
         </div>
