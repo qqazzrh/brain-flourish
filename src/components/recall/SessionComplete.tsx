@@ -123,6 +123,16 @@ export default function SessionComplete() {
     }
   };
 
+  // Auto-save on mount to prevent data loss
+  useEffect(() => {
+    if (!autoSaveAttempted.current && participant && !saved) {
+      autoSaveAttempted.current = true;
+      doSave();
+    }
+  }, [participant]);
+
+  const handleSave = () => doSave();
+
   const handleBackToHub = () => {
     resetRecall();
     navigate('/');
