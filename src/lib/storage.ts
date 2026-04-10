@@ -138,10 +138,16 @@ export async function saveParticipant(p: ParticipantRecord) {
   const row = participantToDb(p);
   if (existing) {
     const { error } = await supabase.from('participants').update(row).eq('participant_id', p.participant_id);
-    if (error) console.error('saveParticipant update error:', error);
+    if (error) {
+      console.error('saveParticipant update error:', error);
+      throw new Error(`Failed to update participant: ${error.message}`);
+    }
   } else {
     const { error } = await supabase.from('participants').insert(row);
-    if (error) console.error('saveParticipant insert error:', error);
+    if (error) {
+      console.error('saveParticipant insert error:', error);
+      throw new Error(`Failed to save participant: ${error.message}`);
+    }
   }
 }
 
@@ -154,10 +160,15 @@ export async function findParticipant(id: string): Promise<ParticipantRecord | n
 export async function generateParticipantId(): Promise<string> {
   const year = new Date().getFullYear();
 
-  // Atomic increment using select then update
-  const { data } = await supabase.from('participant_id_counter').select('next_id').eq('id', 1).single();
-  const nextId = data?.next_id || 1;
-  await supabase.from('participant_id_counter').update({ next_id: nextId + 1 }).eq('id', 1);
+  const { data, error: fetchError } = await supabase.from('participant_id_counter').select('next_id').eq('id', 1).single();
+  if (fetchError || !data) {
+    throw new Error(`Failed to generate participant ID: ${fetchError?.message || 'counter not found'}`);
+  }
+  const nextId = data.next_id || 1;
+  const { error: updateError } = await supabase.from('participant_id_counter').update({ next_id: nextId + 1 }).eq('id', 1);
+  if (updateError) {
+    throw new Error(`Failed to increment ID counter: ${updateError.message}`);
+  }
 
   return `RYB-${year}-${String(nextId).padStart(4, '0')}`;
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,24 +73,30 @@ export default function SessionSetup() {
     if (!demographicsValid || loading) return;
     setLoading(true);
 
-    const demandProfile = deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel, dEducation as EducationLevel);
-    const demographics: ParticipantDemographics = {
-      name: dName.trim(), age_band: dAge as AgeBand, gender: dGender as Gender,
-      education_level: dEducation as EducationLevel, occupation_type: dOccupation as OccupationType,
-      seniority_level: dSeniority as SeniorityLevel, demand_profile: demandProfile,
-    };
+    try {
+      const demandProfile = deriveDemandProfile(dOccupation as OccupationType, dSeniority as SeniorityLevel, dEducation as EducationLevel);
+      const demographics: ParticipantDemographics = {
+        name: dName.trim(), age_band: dAge as AgeBand, gender: dGender as Gender,
+        education_level: dEducation as EducationLevel, occupation_type: dOccupation as OccupationType,
+        seniority_level: dSeniority as SeniorityLevel, demand_profile: demandProfile,
+      };
 
-    const id = await generateParticipantId();
-    setNewId(id);
-    const p: ParticipantRecord = {
-      participant_id: id, created_at: new Date().toISOString(),
-      created_by_facilitator: facilitator?.id || '', created_at_location: location,
-      demographics, session_count: 0, last_session_date: null, last_recall_raw_score: null, sessions: [],
-    };
-    await saveParticipant(p);
-    setFoundParticipant(p);
-    setSub('new');
-    setLoading(false);
+      const id = await generateParticipantId();
+      setNewId(id);
+      const p: ParticipantRecord = {
+        participant_id: id, created_at: new Date().toISOString(),
+        created_by_facilitator: facilitator?.id || '', created_at_location: location,
+        demographics, session_count: 0, last_session_date: null, last_recall_raw_score: null, sessions: [],
+      };
+      await saveParticipant(p);
+      setFoundParticipant(p);
+      setSub('new');
+    } catch (err) {
+      console.error('Registration failed:', err);
+      toast.error('Registration failed. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNewParticipant = () => {
