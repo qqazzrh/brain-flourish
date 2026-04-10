@@ -220,10 +220,16 @@ export async function saveSession(session: any) {
 
   if (existing) {
     const { error } = await supabase.from('sessions').update(row).eq('session_id', session.session_id);
-    if (error) console.error('saveSession update error:', error);
+    if (error) {
+      console.error('saveSession update error:', error);
+      throw new Error(`Failed to update session: ${error.message}`);
+    }
   } else {
     const { error } = await supabase.from('sessions').insert(row);
-    if (error) console.error('saveSession insert error:', error);
+    if (error) {
+      console.error('saveSession insert error:', error);
+      throw new Error(`Failed to save session: ${error.message}`);
+    }
   }
 }
 
