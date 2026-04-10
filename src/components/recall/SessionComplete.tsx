@@ -42,8 +42,8 @@ export default function SessionComplete() {
 
   const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
 
-  const handleSave = async () => {
-    if (saving) return;
+  const doSave = async () => {
+    if (saving || saved) return;
     if (!participant) {
       toast({
         variant: 'destructive',
