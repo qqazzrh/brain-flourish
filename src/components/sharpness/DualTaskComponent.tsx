@@ -336,7 +336,7 @@ export default function DualTaskComponent() {
             <p className="text-base text-foreground">Do NOT tap for low tones.</p>
           </div>
           <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockB'); startBlock('blockB'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockB'); startBlock('blockB'); }}>
             I'm ready — Start
           </Button>
         </div>
@@ -361,7 +361,7 @@ export default function DualTaskComponent() {
             <p className="text-sm text-muted-foreground mt-2">Do your best — it is meant to be challenging.</p>
           </div>
           <p className="text-sm text-muted-foreground">60 seconds.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockC'); startBlock('blockC'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockC'); startBlock('blockC'); }}>
             Start — Both Tasks
           </Button>
         </div>
