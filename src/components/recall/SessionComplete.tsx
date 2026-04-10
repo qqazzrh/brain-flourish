@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export default function SessionComplete() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const autoSaveAttempted = useRef(false);
 
   const units = passage?.scoreable_units || [];
   const totalUnits = units.length;

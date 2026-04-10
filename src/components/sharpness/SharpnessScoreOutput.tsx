@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSharpness } from '@/contexts/SharpnessContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeDualTaskScore, computeChoiceRTScore, computeCategorySwitchScore, computeSharpnessPillarScore } from '@/lib/sharpness-scoring';
@@ -15,6 +15,7 @@ export default function SharpnessScoreOutput() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const autoSaveAttempted = useRef(false);
 
   const dualTask = useMemo(() => computeDualTaskScore(state.blockALog, state.blockBLog, state.blockCLog), [state.blockALog, state.blockBLog, state.blockCLog]);
   const choiceRT = useMemo(() => computeChoiceRTScore(state.choiceRTLog), [state.choiceRTLog]);
@@ -24,8 +25,8 @@ export default function SharpnessScoreOutput() {
   const testDuration = state.testStartTime && state.testEndTime
     ? Math.round((new Date(state.testEndTime).getTime() - new Date(state.testStartTime).getTime()) / 1000) : 0;
 
-  const handleSave = async () => {
-    if (saving) return;
+  const doSave = async () => {
+    if (saving || saved) return;
     setSaving(true);
 
     try {
@@ -40,7 +41,6 @@ export default function SharpnessScoreOutput() {
         sharpness_rt_switch_cost_ms: categorySwitch.rtSwitchCost,
       });
 
-      // Update session record to mark sharpness as done
       const sessionId = `${participant.participant_id}-S${currentSessionNumber}`;
       await saveSession({
         session_id: sessionId,
@@ -80,6 +80,15 @@ export default function SharpnessScoreOutput() {
     }
   };
 
+  // Auto-save on mount to prevent data loss
+  useEffect(() => {
+    if (!autoSaveAttempted.current && participant && !saved) {
+      autoSaveAttempted.current = true;
+      doSave();
+    }
+  }, [participant]);
+
+  const handleSave = () => doSave();
   const handleBackToHub = () => { resetSharpness(); navigate('/'); };
 
   return (
