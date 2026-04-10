@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useLockIn } from '@/contexts/LockInContext';
 import { useSession } from '@/contexts/SessionContext';
 import { computeLockInScore, computeCombinedLockInScore, computeSegments } from '@/lib/stimulus-engine';
