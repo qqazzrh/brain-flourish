@@ -6,7 +6,7 @@ export default function LockInGame2Explanation() {
   const { goToScreen } = useLockIn();
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
       <div className="w-full max-w-lg space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-display text-3xl text-foreground">LOCK-IN TEST</h1>

@@ -10,7 +10,7 @@ export default function DistractionInstruction() {
 
   if (contentLoading || !distractionOptionSet) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -25,7 +25,7 @@ export default function DistractionInstruction() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col items-center justify-center p-6 bg-background"
+      className="min-h-[100dvh] flex flex-col items-center justify-center p-6 bg-background"
     >
       <div className="w-full max-w-2xl space-y-8">
         <div className="bg-primary/5 border border-primary/20 rounded-xl px-6 py-3">

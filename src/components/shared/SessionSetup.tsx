@@ -127,7 +127,7 @@ export default function SessionSetup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-background">
       <AnimatePresence mode="wait">
         {sub === 'choice' && (
           <motion.div key="choice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-lg space-y-5">

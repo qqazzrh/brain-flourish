@@ -84,7 +84,7 @@ export default function DistractionTimer() {
 
   if (contentLoading || !distractionOptionSet) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -95,7 +95,7 @@ export default function DistractionTimer() {
   const timerColor = seconds <= 0 ? 'text-destructive' : seconds <= 10 ? 'text-warning' : 'text-foreground';
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background relative">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col bg-background relative">
       {/* Header */}
       <div className="px-6 py-4 border-b flex items-center justify-between">
         <div>

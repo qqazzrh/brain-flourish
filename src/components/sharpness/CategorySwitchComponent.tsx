@@ -188,7 +188,7 @@ export default function CategorySwitchComponent() {
   // Instructions screen
   if (phase === 'instructions') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 3 — CATEGORY SWITCH</p>
           <div className="card-elevated p-6 space-y-4 text-left">
@@ -234,7 +234,7 @@ export default function CategorySwitchComponent() {
   // Practice complete screen
   if (phase === 'practice_done') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-8 text-center">
           <h1 className="text-display text-2xl text-foreground">PRACTICE COMPLETE</h1>
           <div className="space-y-4">

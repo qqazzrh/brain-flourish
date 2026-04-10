@@ -114,7 +114,7 @@ export default function LockInScoreOutput() {
   const handleNextOrHub = () => { resetLockIn(); navigate('/'); };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col bg-background">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col bg-background">
       <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-display text-2xl text-foreground">LOCK-IN TEST COMPLETE</h1>

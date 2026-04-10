@@ -297,7 +297,7 @@ export default function DualTaskComponent() {
   // Instruction screens
   if (phase === 'instrA') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 1 of 3: Visual task only</p>
@@ -322,7 +322,7 @@ export default function DualTaskComponent() {
 
   if (phase === 'instrB') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 2 of 3: Listening task only</p>
@@ -346,7 +346,7 @@ export default function DualTaskComponent() {
 
   if (phase === 'instrC') {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-8 bg-background">
         <div className="w-full max-w-lg space-y-6 text-center">
           <p className="text-display text-sm text-primary">PART 1 — DUAL TASK</p>
           <p className="text-display text-lg text-muted-foreground">Step 3 of 3: Both at the same time</p>

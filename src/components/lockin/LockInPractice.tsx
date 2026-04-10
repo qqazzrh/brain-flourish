@@ -126,7 +126,7 @@ export default function LockInPractice() {
     : 'text-destructive bg-destructive/10';
 
   return (
-    <div className={`min-h-screen flex flex-col select-none transition-colors duration-150 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : 'bg-background'}`} onClick={handleTap}>
+    <div className={`min-h-[100dvh] flex flex-col select-none transition-colors duration-150 ${wrongFlash ? 'bg-red-100 dark:bg-red-950/30' : 'bg-background'}`} onClick={handleTap}>
       {/* Header */}
       <div className="px-6 py-3 flex items-center justify-between border-b">
         <span className="text-display text-base text-warning">PRACTICE</span>

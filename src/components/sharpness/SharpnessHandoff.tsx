@@ -12,7 +12,7 @@ export default function SharpnessHandoff() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] flex flex-col items-center justify-center p-6 bg-background">
       <div className="w-full max-w-2xl space-y-8">
         <div className="bg-primary/5 border border-primary/20 rounded-xl px-6 py-3">
           <p className="text-display text-lg text-primary">NEXT: SHARPNESS TEST</p>
