@@ -28,9 +28,34 @@ function generateToneSchedule(durationMs: number): { time: number; isHigh: boole
   return tones;
 }
 
+// Shared AudioContext — created once, unlocked on first user gesture
+let sharedAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+    sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return sharedAudioCtx;
+}
+
+/** Call during a user tap/click to unlock audio on iOS/iPad */
+function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  // Play a silent buffer to fully unlock on iOS
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+}
+
 function playTone(frequency: number, duration: number = 200) {
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
