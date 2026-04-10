@@ -28,9 +28,34 @@ function generateToneSchedule(durationMs: number): { time: number; isHigh: boole
   return tones;
 }
 
+// Shared AudioContext — created once, unlocked on first user gesture
+let sharedAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+    sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return sharedAudioCtx;
+}
+
+/** Call during a user tap/click to unlock audio on iOS/iPad */
+function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  // Play a silent buffer to fully unlock on iOS
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+}
+
 function playTone(frequency: number, duration: number = 200) {
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -287,7 +312,7 @@ export default function DualTaskComponent() {
             <p className="text-base text-foreground">Do NOT tap for odd numbers.</p>
           </div>
           <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockA'); startBlock('blockA'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockA'); startBlock('blockA'); }}>
             I'm ready — Start
           </Button>
         </div>
@@ -311,7 +336,7 @@ export default function DualTaskComponent() {
             <p className="text-base text-foreground">Do NOT tap for low tones.</p>
           </div>
           <p className="text-sm text-muted-foreground">10 seconds. Starting now.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockB'); startBlock('blockB'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockB'); startBlock('blockB'); }}>
             I'm ready — Start
           </Button>
         </div>
@@ -336,7 +361,7 @@ export default function DualTaskComponent() {
             <p className="text-sm text-muted-foreground mt-2">Do your best — it is meant to be challenging.</p>
           </div>
           <p className="text-sm text-muted-foreground">60 seconds.</p>
-          <Button variant="hero" size="xl" className="w-full" onClick={() => { setPhase('blockC'); startBlock('blockC'); }}>
+          <Button variant="hero" size="xl" className="w-full" onClick={() => { unlockAudio(); setPhase('blockC'); startBlock('blockC'); }}>
             Start — Both Tasks
           </Button>
         </div>
