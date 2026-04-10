@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRecall } from '@/contexts/RecallContext';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export default function SessionComplete() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const autoSaveAttempted = useRef(false);
 
   const units = passage?.scoreable_units || [];
   const totalUnits = units.length;
@@ -41,8 +42,8 @@ export default function SessionComplete() {
 
   const handleEditScore = () => { setScoreEdited(); goToScreen(5); };
 
-  const handleSave = async () => {
-    if (saving) return;
+  const doSave = async () => {
+    if (saving || saved) return;
     if (!participant) {
       toast({
         variant: 'destructive',
@@ -121,6 +122,16 @@ export default function SessionComplete() {
       setSaving(false);
     }
   };
+
+  // Auto-save on mount to prevent data loss
+  useEffect(() => {
+    if (!autoSaveAttempted.current && participant && !saved) {
+      autoSaveAttempted.current = true;
+      doSave();
+    }
+  }, [participant]);
+
+  const handleSave = () => doSave();
 
   const handleBackToHub = () => {
     resetRecall();
