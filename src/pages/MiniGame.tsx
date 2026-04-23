@@ -141,11 +141,11 @@ export default function MiniGame() {
 
   // Benchmark bands (simple verbal-fluency-inspired)
   const benchmark = useMemo(() => {
-    if (totalScore >= 22) return { band: 'Exceptional', tone: 'success', desc: 'Top-tier verbal fluency. Lightning-fast retrieval and category access.' };
-    if (totalScore >= 16) return { band: 'Above Average', tone: 'success', desc: 'Strong fluency. Your brain is retrieving words faster than most.' };
-    if (totalScore >= 10) return { band: 'Average', tone: 'primary', desc: 'Healthy baseline. You\'re in the typical range for adults.' };
-    if (totalScore >= 6) return { band: 'Below Average', tone: 'warning', desc: 'Slight slowing. Could indicate fatigue, stress, or worth practicing.' };
-    return { band: 'Needs Practice', tone: 'destructive', desc: 'Word retrieval was slow today. Try again rested for a fairer reading.' };
+    if (totalScore >= 22) return { band: 'Exceptional', textClass: 'text-success', bgClass: 'bg-success/15', borderClass: 'border-success/30', desc: 'Top-tier verbal fluency. Lightning-fast retrieval and category access.' };
+    if (totalScore >= 16) return { band: 'Above Average', textClass: 'text-success', bgClass: 'bg-success/15', borderClass: 'border-success/30', desc: 'Strong fluency. Your brain is retrieving words faster than most.' };
+    if (totalScore >= 10) return { band: 'Average', textClass: 'text-primary', bgClass: 'bg-primary/15', borderClass: 'border-primary/30', desc: 'Healthy baseline. You\'re in the typical range for adults.' };
+    if (totalScore >= 6) return { band: 'Below Average', textClass: 'text-warning', bgClass: 'bg-warning/15', borderClass: 'border-warning/30', desc: 'Slight slowing. Could indicate fatigue, stress, or worth practicing.' };
+    return { band: 'Needs Practice', textClass: 'text-destructive', bgClass: 'bg-destructive/15', borderClass: 'border-destructive/30', desc: 'Word retrieval was slow today. Try again rested for a fairer reading.' };
   }, [totalScore]);
 
   const reset = () => {
@@ -311,7 +311,7 @@ export default function MiniGame() {
                 </div>
                 <p className="text-sm text-muted-foreground uppercase tracking-wider">Your Brain Sprint Score</p>
                 <p className="text-display text-7xl text-foreground">{totalScore}</p>
-                <p className={`text-display text-xl text-${benchmark.tone}`}>{benchmark.band}</p>
+                <p className={`text-display text-xl ${benchmark.textClass}`}>{benchmark.band}</p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">{benchmark.desc}</p>
               </div>
 
@@ -341,11 +341,11 @@ export default function MiniGame() {
               <div className="card-elevated p-6 space-y-3">
                 <h3 className="text-display text-lg flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" /> Benchmark</h3>
                 <div className="space-y-1.5 text-sm">
-                  <BenchmarkRow label="Needs Practice" range="0–5" active={totalScore < 6} tone="destructive" />
-                  <BenchmarkRow label="Below Average" range="6–9" active={totalScore >= 6 && totalScore < 10} tone="warning" />
-                  <BenchmarkRow label="Average" range="10–15" active={totalScore >= 10 && totalScore < 16} tone="primary" />
-                  <BenchmarkRow label="Above Average" range="16–21" active={totalScore >= 16 && totalScore < 22} tone="success" />
-                  <BenchmarkRow label="Exceptional" range="22+" active={totalScore >= 22} tone="success" />
+                  <BenchmarkRow label="Needs Practice" range="0–5" active={totalScore < 6} textClass="text-destructive" bgClass="bg-destructive/15" borderClass="border-destructive/30" />
+                  <BenchmarkRow label="Below Average" range="6–9" active={totalScore >= 6 && totalScore < 10} textClass="text-warning" bgClass="bg-warning/15" borderClass="border-warning/30" />
+                  <BenchmarkRow label="Average" range="10–15" active={totalScore >= 10 && totalScore < 16} textClass="text-primary" bgClass="bg-primary/15" borderClass="border-primary/30" />
+                  <BenchmarkRow label="Above Average" range="16–21" active={totalScore >= 16 && totalScore < 22} textClass="text-success" bgClass="bg-success/15" borderClass="border-success/30" />
+                  <BenchmarkRow label="Exceptional" range="22+" active={totalScore >= 22} textClass="text-success" bgClass="bg-success/15" borderClass="border-success/30" />
                 </div>
               </div>
 
@@ -372,10 +372,10 @@ export default function MiniGame() {
   );
 }
 
-function BenchmarkRow({ label, range, active, tone }: { label: string; range: string; active: boolean; tone: string }) {
+function BenchmarkRow({ label, range, active, textClass, bgClass, borderClass }: { label: string; range: string; active: boolean; textClass: string; bgClass: string; borderClass: string }) {
   return (
-    <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${active ? `bg-${tone}/15 border border-${tone}/30` : 'bg-muted/40'}`}>
-      <span className={`font-medium ${active ? `text-${tone}` : 'text-muted-foreground'}`}>{label}</span>
+    <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${active ? `${bgClass} border ${borderClass}` : 'bg-muted/40'}`}>
+      <span className={`font-medium ${active ? textClass : 'text-muted-foreground'}`}>{label}</span>
       <span className={`tabular-nums text-sm ${active ? 'font-bold' : 'text-muted-foreground'}`}>{range}</span>
     </div>
   );
