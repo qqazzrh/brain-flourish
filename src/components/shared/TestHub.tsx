@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { Brain, Lock, Zap, LogOut, BarChart3, CheckCircle2, Database } from 'lucide-react';
+import { Brain, Lock, Zap, LogOut, BarChart3, CheckCircle2, Database, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import BFSScoring from '@/components/scoring/BFSScoring';
 import { getPillarScores, PillarScores } from '@/lib/storage';
 
-type Tab = 'tests' | 'scoring';
+type Tab = 'tests' | 'scoring' | 'minigame';
 
 export default function TestHub() {
   const { participant, facilitator, location, isPractice, clearParticipant, logout, assignedForm, currentSessionNumber } = useSession();
@@ -69,6 +69,9 @@ export default function TestHub() {
           <button onClick={() => setActiveTab('scoring')} className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'scoring' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <BarChart3 className="w-4 h-4" /> Scoring
           </button>
+          <button onClick={() => setActiveTab('minigame')} className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'minigame' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            <Sparkles className="w-4 h-4" /> Mini Game
+          </button>
         </div>
       </div>
 
@@ -112,6 +115,22 @@ export default function TestHub() {
           </>
         )}
         {activeTab === 'scoring' && <BFSScoring />}
+        {activeTab === 'minigame' && (
+          <div className="space-y-5">
+            <div className="card-elevated p-8 text-center space-y-4">
+              <div className="inline-flex w-16 h-16 rounded-2xl bg-primary/15 items-center justify-center mx-auto">
+                <Sparkles className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="text-display text-2xl text-foreground">Brain Sprint — 60s Mini Game</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                A quick verbal-fluency challenge. No Lock-In required. Two 30-second rounds: type words starting with a letter, then tap as many things in a category as you can. Get a personal report instantly.
+              </p>
+              <Button variant="hero" size="xl" onClick={() => navigate('/mini-game')} className="gap-2">
+                <Sparkles className="w-5 h-5" /> Launch Mini Game
+              </Button>
+            </div>
+          </div>
+        )}
       </main>
 
       <footer className="px-6 py-4 flex items-center justify-between">
