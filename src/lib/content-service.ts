@@ -7,98 +7,93 @@ import { WordTrial, WORD_LIBRARY } from './word-library';
 // ====== Recall Passages ======
 
 export async function getPassageForForm(formId: string): Promise<PassageForm> {
-  // Try DB first
-  const { data } = await supabase
-    .from('recall_passages')
-    .select('*')
-    .eq('form_id', formId)
-    .maybeSingle();
+  // Pull ALL passages from DB and pick one at random for this session.
+  // The formId param is preserved for backward compat / fallback only —
+  // randomization is the new behavior so participants don't see the same
+  // passage every session.
+  const { data } = await supabase.from('recall_passages').select('*');
 
-  if (data) {
-    const units = (typeof data.scoreable_units === 'string'
-      ? JSON.parse(data.scoreable_units)
-      : data.scoreable_units) as ScoreableUnit[];
+  if (data && data.length > 0) {
+    const pick = data[Math.floor(Math.random() * data.length)];
+    const units = (typeof pick.scoreable_units === 'string'
+      ? JSON.parse(pick.scoreable_units)
+      : pick.scoreable_units) as ScoreableUnit[];
     return {
-      form_id: data.form_id,
-      domain: data.domain,
-      word_count: data.word_count,
-      fk_grade: Number(data.fk_grade),
-      emotional_valence_mean: Number(data.emotional_valence_mean),
-      passage_text: data.passage_text,
+      form_id: pick.form_id,
+      domain: pick.domain,
+      word_count: pick.word_count,
+      fk_grade: Number(pick.fk_grade),
+      emotional_valence_mean: Number(pick.emotional_valence_mean),
+      passage_text: pick.passage_text,
       scoreable_units: units,
     };
   }
 
   // Fallback to hardcoded
-  if (formId in PASSAGE_FORMS) {
-    return PASSAGE_FORMS[formId as keyof typeof PASSAGE_FORMS];
-  }
-
-  // Default to form A
+  if (formId in PASSAGE_FORMS) return PASSAGE_FORMS[formId as keyof typeof PASSAGE_FORMS];
   return PASSAGE_FORMS.A;
 }
 
 export async function getFormDomain(formId: string): Promise<string> {
-  const { data } = await supabase
-    .from('recall_passages')
-    .select('domain')
-    .eq('form_id', formId)
-    .maybeSingle();
-
-  if (data) return data.domain;
+  // Domain is descriptive only; not needed for scoring. Keep simple.
   if (formId in FORM_DOMAINS) return FORM_DOMAINS[formId as keyof typeof FORM_DOMAINS];
-  return 'Unknown';
+  return 'Mixed';
 }
 
 // ====== Distraction Tasks ======
 
-export async function getDistractionTask(formId: string): Promise<DistractionTask> {
-  const { data } = await supabase
-    .from('distraction_options')
-    .select('*')
-    .eq('form_id', formId)
-    .maybeSingle();
+// Cache one random distraction row per session so getDistractionTask and
+// getDistractionOptions return the same item.
+let _cachedDistractionRow: any = null;
+let _cachedDistractionFor: string | null = null;
 
-  if (data) {
+async function pickRandomDistractionRow(formId: string) {
+  if (_cachedDistractionFor === formId && _cachedDistractionRow) return _cachedDistractionRow;
+  const { data } = await supabase.from('distraction_options').select('*');
+  if (data && data.length > 0) {
+    _cachedDistractionRow = data[Math.floor(Math.random() * data.length)];
+    _cachedDistractionFor = formId;
+    return _cachedDistractionRow;
+  }
+  return null;
+}
+
+export function resetSessionContentCache() {
+  _cachedDistractionRow = null;
+  _cachedDistractionFor = null;
+}
+
+export async function getDistractionTask(formId: string): Promise<DistractionTask> {
+  const row = await pickRandomDistractionRow(formId);
+  if (row) {
     return {
-      form_id: data.form_id,
-      category: data.category,
-      letter: data.letter,
-      expected_valid_range: (typeof data.expected_valid_range === 'string'
-        ? JSON.parse(data.expected_valid_range)
-        : data.expected_valid_range) as [number, number],
+      form_id: row.form_id,
+      category: row.category,
+      letter: row.letter,
+      expected_valid_range: (typeof row.expected_valid_range === 'string'
+        ? JSON.parse(row.expected_valid_range)
+        : row.expected_valid_range) as [number, number],
       instruction_template: `Name as many {category} as you can think of that begin with the letter {letter}.`,
     };
   }
-
-  if (formId in DISTRACTION_TASKS) {
-    return DISTRACTION_TASKS[formId as keyof typeof DISTRACTION_TASKS];
-  }
+  if (formId in DISTRACTION_TASKS) return DISTRACTION_TASKS[formId as keyof typeof DISTRACTION_TASKS];
   return DISTRACTION_TASKS.A;
 }
 
 export async function getDistractionOptions(formId: string): Promise<DistractionOptionSet> {
-  const { data } = await supabase
-    .from('distraction_options')
-    .select('*')
-    .eq('form_id', formId)
-    .maybeSingle();
-
-  if (data) {
-    const validOptions = (typeof data.valid_options === 'string'
-      ? JSON.parse(data.valid_options)
-      : data.valid_options) as string[];
+  const row = await pickRandomDistractionRow(formId);
+  if (row) {
+    const validOptions = (typeof row.valid_options === 'string'
+      ? JSON.parse(row.valid_options)
+      : row.valid_options) as string[];
     return {
-      form_id: data.form_id,
-      category: data.category,
-      instruction: data.instruction,
+      form_id: row.form_id,
+      category: row.category,
+      instruction: row.instruction,
       validOptions,
     };
   }
-
-  if (formId in HARDCODED_DISTRACTION_OPTIONS) {
-    return HARDCODED_DISTRACTION_OPTIONS[formId as keyof typeof HARDCODED_DISTRACTION_OPTIONS];
-  }
+  if (formId in HARDCODED_DISTRACTION_OPTIONS) return HARDCODED_DISTRACTION_OPTIONS[formId as keyof typeof HARDCODED_DISTRACTION_OPTIONS];
   return HARDCODED_DISTRACTION_OPTIONS.A;
 }
 
