@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Brain, Lock, Zap } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function FacilitatorLogin() {
   const { setFacilitator, setPractice } = useSession();
+  const navigate = useNavigate();
   const [selectedFac, setSelectedFac] = useState('');
   const [location, setLocation] = useState('');
   const [facilitators, setFacilitators] = useState<Facilitator[]>([]);
@@ -103,6 +106,12 @@ export default function FacilitatorLogin() {
             className="text-muted-foreground"
           >
             Enter Practice Mode
+          </Button>
+        </div>
+
+        <div className="text-center">
+          <Button variant="outline" size="lg" onClick={() => navigate('/mini-game')} className="gap-2">
+            <Sparkles className="w-4 h-4 text-primary" /> Try the 60-second Mini Game (no login)
           </Button>
         </div>
 
