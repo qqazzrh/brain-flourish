@@ -321,9 +321,9 @@ export default function CategorySwitchComponent() {
           <button
             key={option}
             onClick={() => handleOptionTap(option)}
-            className={`flex-1 min-h-[80px] md:min-h-[100px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target ${wrongOption === option ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
+            className={`flex-1 min-h-[140px] md:min-h-[160px] rounded-xl border-2 flex items-center justify-center transition-colors tap-target px-3 ${wrongOption === option ? 'border-red-500 bg-red-200/60 dark:bg-red-900/40' : `${colors.border} bg-background/80 active:bg-primary/20 active:border-primary`}`}
           >
-            <span className="text-display text-base md:text-lg text-foreground">{option}</span>
+            <span className="text-display text-xl md:text-2xl text-foreground">{option}</span>
           </button>
         ))}
       </div>
