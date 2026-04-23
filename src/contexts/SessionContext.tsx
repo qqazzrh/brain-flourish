@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { Facilitator, ParticipantRecord, ParticipantType, FormId, PassageForm, DistractionTask } from '@/lib/types';
 import { DistractionOptionSet } from '@/lib/distraction-options';
-import { getPassageForForm, getDistractionTask, getDistractionOptions, getFormDomain } from '@/lib/content-service';
+import { getPassageForForm, getDistractionTask, getDistractionOptions, getFormDomain, resetSessionContentCache } from '@/lib/content-service';
 import { PASSAGE_FORMS, DISTRACTION_TASKS, FORM_DOMAINS } from '@/lib/content-library';
 import { DISTRACTION_OPTIONS } from '@/lib/distraction-options';
 
@@ -100,6 +100,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     async function loadContent() {
       setContentLoading(true);
+      // Force a fresh random pick from the DB on every form/session change
+      resetSessionContentCache();
       try {
         const [p, dt, dopts, domain] = await Promise.all([
           getPassageForForm(assignedForm),
