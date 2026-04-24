@@ -1,0 +1,1 @@
+DELETE FROM public.distraction_options WHERE jsonb_array_length(valid_options) < 8;
