@@ -65,15 +65,24 @@ export default function CategorySwitchComponent() {
           getWordTrials(10, 'syllables'),
         ]);
         // Interleave: groups of 3 (one per rule) to match the rule rotation
-        const interleaved: WordTrial[] = [];
-        const maxLen = Math.max(m.length, l.length, s.length);
-        for (let i = 0; i < maxLen; i++) {
-          if (i < m.length) interleaved.push(m[i]);
-          if (i < l.length) interleaved.push(l[i]);
-          if (i < s.length) interleaved.push(s[i]);
+        // Build blocks of 3 matching rule rotation: 3×meaning, 3×letter, 3×syllables, repeat
+        const blocked: WordTrial[] = [];
+        const blockSize = 3;
+        const maxBlocks = Math.ceil(Math.max(m.length, l.length, s.length) / blockSize);
+        const pools = [m, l, s];
+        const cursors = [0, 0, 0];
+        for (let b = 0; b < maxBlocks; b++) {
+          for (let p = 0; p < 3; p++) {
+            for (let t = 0; t < blockSize; t++) {
+              if (cursors[p] < pools[p].length) {
+                blocked.push(pools[p][cursors[p]]);
+                cursors[p]++;
+              }
+            }
+          }
         }
-        setPracticeWords(interleaved.slice(0, 12));
-        setRealWords(interleaved);
+        setPracticeWords(blocked.slice(0, 12));
+        setRealWords(blocked);
       } catch {
         const { getShuffledWordSet } = await import('@/lib/word-library');
         setPracticeWords(getShuffledWordSet(10));
