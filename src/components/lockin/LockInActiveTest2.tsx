@@ -21,7 +21,7 @@ export default function LockInActiveTest2() {
   const [wrongFlash, setWrongFlash] = useState(false);
 
   // Dual mode: both 7→3 and 6→5
-  const sequenceRef = useRef(generateSequence(actualStimuli, 0.12, 3, 'dual'));
+  const sequenceRef = useRef(generateSequence(actualStimuli, 0.22, 3, 'dual'));
   const indexRef = useRef(0);
   const stimulusOnsetRef = useRef<number>(0);
   const stimulusOnsetISORef = useRef<string>('');
