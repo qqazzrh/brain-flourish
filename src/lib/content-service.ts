@@ -46,21 +46,31 @@ export async function getFormDomain(formId: string): Promise<string> {
 // getDistractionOptions return the same item.
 let _cachedDistractionRow: any = null;
 let _cachedDistractionFor: string | null = null;
+let _inflightDistractionPromise: Promise<any> | null = null;
 
 async function pickRandomDistractionRow(formId: string) {
   if (_cachedDistractionFor === formId && _cachedDistractionRow) return _cachedDistractionRow;
-  const { data } = await supabase.from('distraction_options').select('*');
-  if (data && data.length > 0) {
-    _cachedDistractionRow = data[Math.floor(Math.random() * data.length)];
-    _cachedDistractionFor = formId;
-    return _cachedDistractionRow;
+  if (_inflightDistractionPromise) return _inflightDistractionPromise;
+  _inflightDistractionPromise = (async () => {
+    const { data } = await supabase.from('distraction_options').select('*');
+    if (data && data.length > 0) {
+      _cachedDistractionRow = data[Math.floor(Math.random() * data.length)];
+      _cachedDistractionFor = formId;
+      return _cachedDistractionRow;
+    }
+    return null;
+  })();
+  try {
+    return await _inflightDistractionPromise;
+  } finally {
+    _inflightDistractionPromise = null;
   }
-  return null;
 }
 
 export function resetSessionContentCache() {
   _cachedDistractionRow = null;
   _cachedDistractionFor = null;
+  _inflightDistractionPromise = null;
 }
 
 export async function getDistractionTask(formId: string): Promise<DistractionTask> {
