@@ -11,6 +11,11 @@ import { useNavigate } from 'react-router-dom';
 
 function RecallFlow() {
   const { state } = useRecall();
+  const { refreshContent } = useSession();
+
+  React.useEffect(() => {
+    refreshContent();
+  }, [refreshContent]);
 
   switch (state.currentScreen) {
     case 0: return <RecallIntro />;
