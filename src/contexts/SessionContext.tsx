@@ -68,6 +68,7 @@ interface SessionContextType {
   distractionOptionSet: DistractionOptionSet | null;
   formDomain: string;
   contentLoading: boolean;
+  refreshContent: () => void;
   setFacilitator: (f: Facilitator, location: string) => void;
   setParticipant: (p: ParticipantRecord, type: ParticipantType, form: FormId, sessionNumber: number) => void;
   setPractice: (v: boolean) => void;
@@ -94,6 +95,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [distractionOptionSet, setDistractionOptionSet] = useState<DistractionOptionSet | null>(null);
   const [formDomain, setFormDomain] = useState<string>('');
   const [contentLoading, setContentLoading] = useState(false);
+  const [contentVersion, setContentVersion] = useState(0);
 
   // Load content when assignedForm changes
   useEffect(() => {
@@ -131,7 +133,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     loadContent();
     return () => { cancelled = true; };
-  }, [assignedForm]);
+  }, [assignedForm, contentVersion]);
+
+  const refreshContent = useCallback(() => {
+    resetSessionContentCache();
+    setContentVersion(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -194,11 +201,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     facilitator, location, participant, participantType, assignedForm,
     isPractice, sessionStartTime, currentSessionNumber,
     passage, distractionTask, distractionOptionSet, formDomain, contentLoading,
+    refreshContent,
     setFacilitator, setParticipant, setPractice, clearParticipant, logout,
   }), [facilitator, location, participant, participantType, assignedForm,
     isPractice, sessionStartTime, currentSessionNumber,
     passage, distractionTask, distractionOptionSet, formDomain, contentLoading,
-    setFacilitator, setParticipant, setPractice, clearParticipant, logout]);
+    refreshContent, setFacilitator, setParticipant, setPractice, clearParticipant, logout]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
