@@ -20,7 +20,7 @@ export default function LockInActiveTest() {
   const [tapFlash, setTapFlash] = useState(false);
   const [wrongFlash, setWrongFlash] = useState(false);
 
-  const sequenceRef = useRef(generateSequence(actualStimuli, 0.10, 3, 'single'));
+  const sequenceRef = useRef(generateSequence(actualStimuli, 0.20, 3, 'single'));
   const indexRef = useRef(0);
   const stimulusOnsetRef = useRef<number>(0);
   const stimulusOnsetISORef = useRef<string>('');
