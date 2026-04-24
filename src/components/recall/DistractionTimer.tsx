@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, RotateCcw, Loader2 } from 'lucide-react';
 
 export default function DistractionTimer() {
-  const { state, goToScreen, setDistractionCounts } = useRecall();
-  const { distractionOptionSet, contentLoading } = useSession();
+  const { goToScreen, setDistractionCounts } = useRecall();
+  const { distractionOptionSet, distractionTask, contentLoading } = useSession();
   
   const [seconds, setSeconds] = useState(90);
   const [timeUp, setTimeUp] = useState(false);
@@ -100,7 +100,9 @@ export default function DistractionTimer() {
       <div className="px-6 py-4 border-b flex items-center justify-between">
         <div>
           <p className="text-display text-lg text-foreground">DISTRACTION TASK RUNNING</p>
-          <p className="text-muted-foreground">{distractionOptionSet.category}</p>
+          <p className="text-muted-foreground">
+            Ask the participant to name as many <span className="font-semibold text-foreground">{distractionOptionSet.category.toLowerCase()}</span> as they can that begin with the letter <span className="font-semibold text-foreground">{(distractionTask?.letter || '').toUpperCase()}</span>.
+          </p>
         </div>
         <div className={`text-display text-4xl tabular-nums ${timerColor} transition-colors`}>
           {mins}:{String(secs).padStart(2, '0')}
