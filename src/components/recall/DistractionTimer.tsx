@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, RotateCcw, Loader2 } from 'lucide-react';
 
 export default function DistractionTimer() {
-  const { state, goToScreen, setDistractionCounts } = useRecall();
-  const { distractionOptionSet, contentLoading } = useSession();
+  const { goToScreen, setDistractionCounts } = useRecall();
+  const { distractionOptionSet, distractionTask, contentLoading } = useSession();
   
   const [seconds, setSeconds] = useState(90);
   const [timeUp, setTimeUp] = useState(false);
