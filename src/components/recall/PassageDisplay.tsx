@@ -4,7 +4,6 @@ import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Loader2, Play, Pause, RotateCcw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 type PlayState = 'idle' | 'loading' | 'playing' | 'paused' | 'ended';
@@ -52,13 +51,24 @@ export default function PassageDisplay() {
 
     setPlayState('loading');
     try {
-      const { data, error } = await supabase.functions.invoke('recall-tts', {
-        body: { text: passage.passage_text },
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recall-tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: passage.passage_text }),
       });
-      if (error) throw error;
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Audio request failed: ${response.status}`);
+      }
 
-      // data should be a Blob when the function returns audio/mpeg
-      const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: 'audio/mpeg' });
+      const blob = await response.blob();
+      if (!blob.type.includes('audio') && blob.size < 1024) {
+        throw new Error('The audio response was not playable.');
+      }
       const url = URL.createObjectURL(blob);
       blobUrlRef.current = url;
 
